@@ -556,7 +556,10 @@ implementation and exit 2 in another.
    not an Agent Skill.
 2. The file's YAML frontmatter (the first `---` … `---` block, if present) is
    parsed for recording: `name`, `description`, and selection-facing metadata
-   are copied into the lock's `skill` object.
+   are copied into the lock's `skill` object. *(Clarification, 2026-08-14,
+   post-lock: `name` and `description` are the scalar-expected fields — a
+   non-scalar value for either yields `frontmatter_status: "invalid"`; all
+   other frontmatter keys admit any JSON-representable value.)*
 3. **Identity never depends on parse success.** The bytes of `SKILL.md` are
    hashed like any file. If frontmatter is absent, malformed, not a YAML map,
    or contains non-scalar values where scalars are expected, the lock records

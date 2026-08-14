@@ -48,3 +48,14 @@ export {
   type DriftFile,
   type DriftReport,
 } from "./check.js";
+export {
+  diff,
+  type DiffChangedEntry,
+  type DiffFileState,
+  type DiffOptions,
+  type DiffPresentEntry,
+  type DiffReport,
+  type DiffResult,
+  type DiffSide,
+  type DiffTree,
+} from "./diff/diff.js";
