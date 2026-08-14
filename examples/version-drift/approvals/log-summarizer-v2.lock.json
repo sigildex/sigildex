@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "spec_version": 1,
+  "tool_version": "0.1.0",
+  "approval_id": "log-summarizer-v2",
+  "artifact_path": "examples/version-drift/skill-v2",
+  "root_digest": "sha256:0b0bec0d4e4435beed62b983c530f4f8249e7b1af01d31fbb8be1989d94cf1c6",
+  "files": [
+    {
+      "path": "SKILL.md",
+      "sha256": "7845139a01644050e936ed23cb8027d5bedf05d97fa8238a5ab92ccd1679be29",
+      "size": 2079,
+      "executable": false,
+      "class": "instructions"
+    },
+    {
+      "path": "reference/log-formats.md",
+      "sha256": "24ab0e3672408d139d489e13e4886f305998ce840795510d5d1d8dd689b62b8d",
+      "size": 1075,
+      "executable": false,
+      "class": "reference"
+    },
+    {
+      "path": "scripts/summarize.sh",
+      "sha256": "c48fb51118b40020690802effcb93a9dacdacd7e510503e47a129b1ca14bb11d",
+      "size": 132,
+      "executable": true,
+      "class": "script"
+    }
+  ],
+  "skill": {
+    "frontmatter_status": "ok",
+    "frontmatter": {
+      "name": "log-summarizer",
+      "description": "Summarize a plain-text application log into a short incident report — error counts, the first and last timestamp seen, and the most frequent messages. Use when someone points at a log file and asks what went wrong.",
+      "version": "1.1.0"
+    }
+  },
+  "created_at": "2026-08-14T00:00:00Z",
+  "limitations": "This record attests the byte identity of the listed files at lock time only. It does not attest safety, provenance, or future content."
+}

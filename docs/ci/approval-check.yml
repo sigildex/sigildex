@@ -1,0 +1,146 @@
+# Skill approval check — copy into .github/workflows/ in the repository that
+# holds the skill and its approval record. Set the three values under `env`.
+#
+# What it proves: the skill directory and its approval record are consistent
+# with each other, and the trusted baseline they are compared against was
+# consistent too. What it cannot prove: that the change is a good idea. That is
+# CODEOWNERS plus branch protection — see README.md next to this file.
+name: Skill approval check
+
+# pull_request only. Never pull_request_target: that runs with a writable token
+# in the base repository's context while checking out untrusted PR content.
+on:
+  pull_request:
+
+# Read-only, repository-scoped, and nothing else. This workflow needs no
+# secrets and no write permission of any kind.
+permissions:
+  contents: read
+
+env:
+  # The skill directory and its approval record, repository-relative.
+  SKILL_DIR: .claude/skills/log-summarizer
+  APPROVAL: .sigildex/approvals/log-summarizer.lock.json
+  # Pin the tool. Update deliberately, the same way you update any dependency.
+  SIGILDEX_VERSION: 0.1.0
+
+jobs:
+  approval-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the pull request head
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 20
+
+      - name: Materialize the base revision
+        env:
+          # The actual base commit of this pull request, from the event payload.
+          # Never origin/main: the PR may target another branch, and the branch
+          # may have moved since the PR was opened.
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          # The default checkout is shallow and may not contain the base commit.
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          # A detached worktree gives the base tree as plain files, with no
+          # branch switch and no effect on the checked-out PR tree.
+          git worktree add --detach "$RUNNER_TEMP/base" "$BASE_SHA"
+
+      - name: Check approval consistency
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          # Block dependency lifecycle scripts during the tool install.
+          NPM_CONFIG_IGNORE_SCRIPTS: "true"
+        run: |
+          set -euo pipefail
+          BASE="$RUNNER_TEMP/base"
+          # Nothing from the candidate skill is ever executed, sourced, or
+          # installed here — it is only read and hashed by the tool.
+          SIGILDEX="npx --yes sigildex@${SIGILDEX_VERSION}"
+          SUMMARY="${GITHUB_STEP_SUMMARY}"
+          echo "### Skill approval check" >> "$SUMMARY"
+
+          fail() { echo "::error::$1"; printf '\n**Failed:** %s\n' "$1" >> "$SUMMARY"; exit 1; }
+          note() { echo "$1"; printf '\n%s\n' "$1" >> "$SUMMARY"; }
+
+          # What exists on each side.
+          [ -d "$BASE/$SKILL_DIR" ] && base_skill=yes || base_skill=no
+          [ -f "$BASE/$APPROVAL" ]  && base_lock=yes  || base_lock=no
+          [ -d "$SKILL_DIR" ]       && head_skill=yes || head_skill=no
+          [ -f "$APPROVAL" ]        && head_lock=yes  || head_lock=no
+          # What this pull request touched, per Git.
+          git diff --quiet "$BASE_SHA" -- "$SKILL_DIR" && skill_changed=no || skill_changed=yes
+          git diff --quiet "$BASE_SHA" -- "$APPROVAL"  && lock_changed=no  || lock_changed=yes
+
+          # Removal, and the partial states around it. A skill and its approval
+          # record must arrive and depart together.
+          if [ "$head_skill" = no ] && [ "$head_lock" = no ]; then
+            if [ "$base_skill" = yes ] && [ "$base_lock" = yes ]; then
+              note "Skill and approval record removed together."; exit 0
+            elif [ "$base_skill" = no ] && [ "$base_lock" = no ]; then
+              note "No skill and no approval record on either side; nothing to check."; exit 0
+            fi
+            fail "The base revision is already in a partial state (skill: $base_skill, approval: $base_lock)."
+          fi
+          if [ "$head_skill" = no ]; then fail "Approval record $APPROVAL has no artifact at $SKILL_DIR."; fi
+          if [ "$head_lock" = no ]; then fail "Skill $SKILL_DIR has no approval record at $APPROVAL."; fi
+
+          # Prove the baseline before trusting it as a reference. If the base
+          # was already inconsistent, stop: nothing compared against it means
+          # anything.
+          if [ "$base_skill" = yes ] && [ "$base_lock" = yes ]; then
+            $SIGILDEX check "$BASE/$SKILL_DIR" --against "$BASE/$APPROVAL" > /dev/null \
+              || fail "The base revision's skill does not match its own approval record."
+          fi
+
+          # Informational approval delta for the reviewer. Its exit status is
+          # 0 (identical) or 2 (differ); 1 means a walk failed, which is fatal.
+          if [ "$base_skill" = yes ]; then
+            diff_status=0
+            $SIGILDEX diff "$BASE/$SKILL_DIR" "$SKILL_DIR" --json > "$RUNNER_TEMP/delta.json" || diff_status=$?
+            [ "$diff_status" -le 2 ] || fail "Could not compare the base and candidate skill directories."
+          fi
+
+          # The gate: does the candidate skill match the candidate record?
+          # Skill changed, record unchanged -> 2. Record changed, skill not
+          # matching it -> 2. Changed consistently -> 0. Neither changed -> 0.
+          check_status=0
+          $SIGILDEX check "$SKILL_DIR" --against "$APPROVAL" || check_status=$?
+          case "$check_status" in
+            0) : ;;
+            2) fail "$SKILL_DIR does not match $APPROVAL. Re-review the skill, then re-run sigildex lock." ;;
+            3) fail "$APPROVAL is not a valid approval record for this tool version." ;;
+            *) fail "sigildex check could not complete (exit $check_status)." ;;
+          esac
+
+          # Category counts only. Skill content — paths, frontmatter, script
+          # text — is never written to the job summary: it is attacker-supplied
+          # and the summary renders Markdown. Counts are advisory; the exit
+          # codes above are the gate.
+          if [ -s "${RUNNER_TEMP}/delta.json" ]; then
+            flat=$(tr -d '\n' < "${RUNNER_TEMP}/delta.json")
+            count() { printf '%s' "$1" | grep -o '"class"' | wc -l; }
+            rest=${flat#*\"added\":};  added_part=${rest%%\"removed\":*}
+            rest=${flat#*\"removed\":}; removed_part=${rest%%\"changed\":*}
+            changed_part=${flat#*\"changed\":}
+            {
+              printf '\n| category | files |\n| --- | --- |\n'
+              printf '| added | %d |\n' "$(count "$added_part")"
+              printf '| removed | %d |\n' "$(count "$removed_part")"
+              printf '| changed | %d |\n' "$(count "$changed_part")"
+            } >> "$SUMMARY"
+          fi
+
+          if [ "$lock_changed" = yes ] && [ "$skill_changed" = no ]; then
+            note "The approval record changed on its own. Consistent, but only a human reviewer can approve it."
+          elif [ "$skill_changed" = yes ]; then
+            note "Skill and approval record changed consistently. Approval is a human decision, not this result."
+          else
+            note "Neither the skill nor its approval record changed."
+          fi
