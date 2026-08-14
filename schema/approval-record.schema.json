@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sigildex.dev/schema/approval-record.schema.json",
+  "title": "Sigildex approval record",
+  "type": "object",
+  "$defs": {
+    "recordedPath": {
+      "type": "string",
+      "maxLength": 1024,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*//)(?!.*[\\u0000-\\u001F\\u007F])[^/]+(?:/[^/]+)*$"
+    },
+    "artifactPath": {
+      "anyOf": [
+        { "const": "." },
+        { "$ref": "#/$defs/recordedPath" }
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "spec_version",
+    "tool_version",
+    "approval_id",
+    "artifact_path",
+    "root_digest",
+    "files",
+    "skill",
+    "created_at",
+    "limitations"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "spec_version": { "const": 1 },
+    "tool_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.-]+)?$"
+    },
+    "approval_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+    },
+    "artifact_path": { "$ref": "#/$defs/artifactPath" },
+    "root_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256", "size", "executable", "class"],
+        "properties": {
+          "path": { "$ref": "#/$defs/recordedPath" },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "size": { "type": "integer", "minimum": 0 },
+          "executable": { "type": "boolean" },
+          "class": {
+            "enum": ["instructions", "reference", "script", "config", "asset", "other"]
+          }
+        }
+      }
+    },
+    "skill": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frontmatter_status", "frontmatter"],
+      "properties": {
+        "frontmatter_status": { "enum": ["ok", "missing", "invalid"] },
+        "frontmatter": { "type": ["object", "null"] }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "frontmatter_status": { "const": "ok" } } },
+          "then": { "properties": { "frontmatter": { "type": "object" } } },
+          "else": { "properties": { "frontmatter": { "type": "null" } } }
+        }
+      ]
+    },
+    "created_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?Z$"
+    },
+    "declared_source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["verification"],
+      "properties": {
+        "kind": { "type": "string", "pattern": "^[a-z0-9-]{1,32}$" },
+        "repository": { "type": "string", "maxLength": 512 },
+        "path": { "$ref": "#/$defs/artifactPath" },
+        "approved_commit": { "type": "string", "pattern": "^[0-9a-f]{7,64}$" },
+        "tracking_policy": { "type": "string", "maxLength": 128 },
+        "verification": { "const": "user_supplied" }
+      }
+    },
+    "limitations": {
+      "const": "This record attests the byte identity of the listed files at lock time only. It does not attest safety, provenance, or future content."
+    }
+  }
+}
