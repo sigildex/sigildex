@@ -97,7 +97,8 @@ export async function readSkillFrontmatter(skillMdPath: string): Promise<SkillMe
     const mapping = value as Record<string, JsonValue>;
     for (const scalarKey of ["name", "description"]) {
       const field = mapping[scalarKey];
-      if (field !== undefined && typeof field === "object") {
+      // Null is a YAML scalar; only collections are the non-scalar values §10.2 rejects.
+      if (field !== undefined && field !== null && typeof field === "object") {
         return { frontmatter_status: "invalid", frontmatter: null };
       }
     }

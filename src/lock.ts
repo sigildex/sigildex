@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { constants } from "node:fs";
 import { open, realpath, rename, unlink } from "node:fs/promises";
-import { dirname, isAbsolute, relative, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { readSkillFrontmatter } from "./identity/frontmatter.js";
 import { validateRecordedPath, walkSkill, type WalkFailure, type WalkOptions } from "./identity/walk.js";
 import {
@@ -31,6 +31,21 @@ export type LockResult =
 
 function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+/**
+ * §3.3 compares the *resolved* output path against the resolved skill root, so the containing
+ * directory is resolved with realpath semantics: a lexical `resolve` alone lets a symlinked
+ * output directory that aliases into the tree slip past the self-inclusion guard. The final
+ * component is never resolved — it is the file about to be created.
+ */
+async function resolveOutputPath(outputPath: string): Promise<string> {
+  const absolute = resolve(outputPath);
+  try {
+    return join(await realpath(dirname(absolute)), basename(absolute));
+  } catch {
+    return absolute;
+  }
 }
 
 function inside(root: string, candidate: string): boolean {
@@ -84,7 +99,7 @@ export async function lock(options: LockOptions): Promise<LockResult> {
     } catch (error) {
       return { kind: "tool_error", message: `Cannot resolve skill root: ${errorText(error)}` };
     }
-    const outputPath = resolve(options.outputPath);
+    const outputPath = await resolveOutputPath(options.outputPath);
     if (inside(resolvedRoot, outputPath)) {
       return { kind: "tool_error", message: "Lock output path is equal to or beneath the skill root" };
     }

@@ -7,16 +7,51 @@
  * untrusted: they can carry escape sequences that rewrite the terminal. Every
  * such string is escaped before it reaches stdout or stderr. JSON output needs
  * no additional treatment beyond JSON encoding.
+ *
+ * Two families are escaped. C0, DEL, and the single-byte C1 controls
+ * (U+0080 to U+009F) are the sequence introducers: a terminal in UTF-8 mode
+ * may act on U+009B exactly as it acts on ESC followed by "[", so escaping C0
+ * alone would leave the same injection reachable one code point higher.
+ * Invisible formatting characters — bidirectional overrides and isolates,
+ * zero-width marks, the byte-order mark, and the line/paragraph separators —
+ * carry no glyph but reorder or hide the text around them, which lets an
+ * untrusted frontmatter value misrepresent what a reviewer is approving.
  */
 
-const CONTROL_CHARACTERS = /[\u0000-\u001F\u007F]/gu;
+/** C0, DEL, and the single-byte C1 controls. */
+function isTerminalControl(codePoint: number): boolean {
+  return codePoint <= 0x1f || (codePoint >= 0x7f && codePoint <= 0x9f);
+}
 
-/** Replaces C0 control characters and DEL with visible `\xNN` escapes. */
-export function sanitizeForTerminal(value: string): string {
-  return value.replace(
-    CONTROL_CHARACTERS,
-    (character) => `\\x${character.codePointAt(0)!.toString(16).padStart(2, "0").toUpperCase()}`,
+/** Zero-width marks, bidi controls and isolates, separators, and the BOM. */
+function isInvisibleFormat(codePoint: number): boolean {
+  return (
+    (codePoint >= 0x200b && codePoint <= 0x200f) ||
+    codePoint === 0x2028 ||
+    codePoint === 0x2029 ||
+    (codePoint >= 0x202a && codePoint <= 0x202e) ||
+    (codePoint >= 0x2066 && codePoint <= 0x2069) ||
+    codePoint === 0xfeff
   );
+}
+
+function hex(codePoint: number, width: number): string {
+  return codePoint.toString(16).toUpperCase().padStart(width, "0");
+}
+
+/**
+ * Replaces control characters with visible `\xNN` escapes and invisible
+ * formatting characters with visible `\u{XXXX}` escapes.
+ */
+export function sanitizeForTerminal(value: string): string {
+  let escaped = "";
+  for (const character of value) {
+    const codePoint = character.codePointAt(0)!;
+    if (isTerminalControl(codePoint)) escaped += `\\x${hex(codePoint, 2)}`;
+    else if (isInvisibleFormat(codePoint)) escaped += `\\u{${hex(codePoint, 4)}}`;
+    else escaped += character;
+  }
+  return escaped;
 }
 
 /** Shortens a display string; sanitization runs first so escapes are counted. */

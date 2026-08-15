@@ -69,6 +69,12 @@ jobs:
           fail() { echo "::error::$1"; printf '\n**Failed:** %s\n' "$1" >> "$SUMMARY"; exit 1; }
           note() { echo "$1"; printf '\n%s\n' "$1" >> "$SUMMARY"; }
 
+          # The pull_request event supplies the base commit. On any other
+          # trigger it is empty, and `git diff ""` below would fail in a way
+          # that reads as "changed" — a pass built on nothing. Refuse instead.
+          git rev-parse --verify --quiet "${BASE_SHA:-}^{commit}" > /dev/null \
+            || fail "BASE_SHA is not a commit in this checkout. This workflow requires the pull_request trigger."
+
           # What exists on each side.
           [ -d "$BASE/$SKILL_DIR" ] && base_skill=yes || base_skill=no
           [ -f "$BASE/$APPROVAL" ]  && base_lock=yes  || base_lock=no
@@ -124,16 +130,22 @@ jobs:
           # and the summary renders Markdown. Counts are advisory; the exit
           # codes above are the gate.
           if [ -s "${RUNNER_TEMP}/delta.json" ]; then
-            flat=$(tr -d '\n' < "${RUNNER_TEMP}/delta.json")
-            count() { printf '%s' "$1" | grep -o '"class"' | wc -l; }
-            rest=${flat#*\"added\":};  added_part=${rest%%\"removed\":*}
-            rest=${flat#*\"removed\":}; removed_part=${rest%%\"changed\":*}
-            changed_part=${flat#*\"changed\":}
+            # Counted by parsing the JSON, never by scanning its text: the
+            # report embeds the skill's own frontmatter verbatim, so a
+            # frontmatter key named `added` or `removed` would otherwise steer
+            # a text scan. Node is already here — setup-node ran above.
+            counts=$(node -e '
+              const report = JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"));
+              const size = (key) => (Array.isArray(report[key]) ? report[key].length : 0);
+              process.stdout.write([size("added"), size("removed"), size("changed")].join(" "));
+            ' "${RUNNER_TEMP}/delta.json") || fail "Could not read the approval delta."
+            added_count=${counts%% *}; counts_rest=${counts#* }
+            removed_count=${counts_rest%% *}; changed_count=${counts_rest#* }
             {
               printf '\n| category | files |\n| --- | --- |\n'
-              printf '| added | %d |\n' "$(count "$added_part")"
-              printf '| removed | %d |\n' "$(count "$removed_part")"
-              printf '| changed | %d |\n' "$(count "$changed_part")"
+              printf '| added | %d |\n' "$added_count"
+              printf '| removed | %d |\n' "$removed_count"
+              printf '| changed | %d |\n' "$changed_count"
             } >> "$SUMMARY"
           fi
 

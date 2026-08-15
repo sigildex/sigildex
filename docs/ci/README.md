@@ -20,9 +20,11 @@ loop the final step over a list.
   the corresponding change to its approval record fails. So does an approval
   record with no artifact, and an artifact with no approval record.
 
-It also attaches an approval delta to the job summary — how many files were
-added, removed, and changed — so a reviewer knows the size of what they are
-approving before opening the diff.
+When the skill existed at the base commit, it also attaches an approval delta to
+the job summary — how many files were added, removed, and changed — so a
+reviewer knows the size of what they are approving before opening the diff. A
+first adoption and a removal have nothing to compare against, so they carry the
+note alone.
 
 Result table, for the states the workflow distinguishes:
 

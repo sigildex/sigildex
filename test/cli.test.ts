@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import { chmod, mkdir, readFile, symlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { main } from "../src/cli/main.js";
 import { fixture, writeSkill } from "./helpers.js";
 
@@ -29,18 +29,6 @@ function run(args: readonly string[], cwd: string): Promise<Run> {
     );
   });
 }
-
-function build(): Promise<void> {
-  return new Promise((resolvePromise, rejectPromise) => {
-    execFile("npm", ["run", "build"], { cwd: repositoryRoot, timeout: 300_000 }, (error, _out, stderr) => {
-      if (error !== null) rejectPromise(new Error(`build failed: ${stderr}`));
-      else resolvePromise();
-    });
-  });
-}
-
-// The CLI is exercised as a real executable, so the tests run against a fresh build.
-beforeAll(build, 300_000);
 
 async function lockedFixture(): Promise<{ temp: string; root: string; lockPath: string }> {
   const { temp, root, lockPath } = await fixture("skill");
