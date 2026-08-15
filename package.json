@@ -13,6 +13,7 @@
   "main": "./dist/index.js",
   "files": [
     "dist",
+    "docs",
     "schema",
     "README.md",
     "LICENSE",
@@ -29,7 +30,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run --passWithNoTests",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "verify:example": "node examples/version-drift/verify-example.mjs"
   },
   "dependencies": {
     "yaml": "^2.7.0"

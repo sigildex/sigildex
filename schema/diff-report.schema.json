@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sigildex.dev/schema/diff-report.schema.json",
+  "title": "Sigildex diff report",
+  "type": "object",
+  "$defs": {
+    "recordedPath": {
+      "type": "string",
+      "maxLength": 1024,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*//)(?!.*[\\u0000-\\u001F\\u007F])[^/]+(?:/[^/]+)*$"
+    },
+    "fileClass": {
+      "enum": ["instructions", "reference", "script", "config", "asset", "other"]
+    },
+    "fileState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256", "size", "executable"],
+      "properties": {
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "size": { "type": "integer", "minimum": 0 },
+        "executable": { "type": "boolean" }
+      }
+    },
+    "presentEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "class", "sha256", "size", "executable"],
+      "properties": {
+        "path": { "$ref": "#/$defs/recordedPath" },
+        "class": { "$ref": "#/$defs/fileClass" },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "size": { "type": "integer", "minimum": 0 },
+        "executable": { "type": "boolean" }
+      }
+    },
+    "changedEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "class", "content_changed", "mode_changed", "base", "candidate"],
+      "properties": {
+        "path": { "$ref": "#/$defs/recordedPath" },
+        "class": { "$ref": "#/$defs/fileClass" },
+        "content_changed": { "type": "boolean" },
+        "mode_changed": { "type": "boolean" },
+        "base": { "$ref": "#/$defs/fileState" },
+        "candidate": { "$ref": "#/$defs/fileState" }
+      }
+    },
+    "skill": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frontmatter_status", "frontmatter"],
+      "properties": {
+        "frontmatter_status": { "enum": ["ok", "missing", "invalid"] },
+        "frontmatter": { "type": ["object", "null"] }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "frontmatter_status": { "const": "ok" } } },
+          "then": { "properties": { "frontmatter": { "type": "object" } } },
+          "else": { "properties": { "frontmatter": { "type": "null" } } }
+        }
+      ]
+    },
+    "side": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["root_digest", "skill"],
+      "properties": {
+        "root_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "skill": { "$ref": "#/$defs/skill" }
+      }
+    }
+  },
+  "additionalProperties": false,
+  "required": ["schema_version", "base", "candidate", "added", "removed", "changed"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "base": { "$ref": "#/$defs/side" },
+    "candidate": { "$ref": "#/$defs/side" },
+    "added": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/presentEntry" }
+    },
+    "removed": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/presentEntry" }
+    },
+    "changed": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/changedEntry" }
+    }
+  }
+}

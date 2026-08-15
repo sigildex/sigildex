@@ -680,9 +680,9 @@ underlying report (and the `--json` output) is the flat ordered structure:
 ```
 { "schema_version": 1,
   "base":      { "root_digest": "sha256:…",
-                 "skill": { "frontmatter_status": "…", "frontmatter": … } },
+                 "skill": { "frontmatter": …, "frontmatter_status": "…" } },
   "candidate": { "root_digest": "sha256:…",
-                 "skill": { "frontmatter_status": "…", "frontmatter": … } },
+                 "skill": { "frontmatter": …, "frontmatter_status": "…" } },
   "added":   [ { "path", "class", "sha256", "size", "executable" } … ],
   "removed": [ { "path", "class", "sha256", "size", "executable" } … ],
   "changed": [ { "path", "class", "content_changed", "mode_changed",
@@ -692,7 +692,8 @@ underlying report (and the `--json` output) is the flat ordered structure:
 
 This inline shape is normative and complete — there is no other key; the
 JSON Schema published with the implementation must match it (spec wins on
-disagreement, as with §9.1). The two `skill` objects carry each side's §9.1
+disagreement, as with §9.1). That schema is
+`schema/diff-report.schema.json`. The two `skill` objects carry each side's §9.1
 skill shape verbatim (object keys serialized in byte-wise sorted order), so
 a consumer can compute any frontmatter comparison it wants from exact
 inputs; the JSON report itself contains **no** computed frontmatter diff.
