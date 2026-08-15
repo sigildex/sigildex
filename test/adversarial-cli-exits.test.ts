@@ -348,9 +348,15 @@ describe("§12/§15: error reporting is consistent across commands and flags", (
 describe("§12: a stdout consumer that closes early cannot manufacture a false success", () => {
   it("§12: a closed stdout pipe never yields exit 0 with truncated output, and the lock stays complete", async () => {
     const { temp, root } = await project();
-    // The record must exceed one pipe buffer so the write cannot complete silently.
+    // The record must exceed any pipe capacity by a wide margin (Linux pipes
+    // hold 64 KiB, and the reader below drains one chunk before closing), so a
+    // synchronous writer cannot finish the whole record before the read end
+    // goes away. 3,000 files with 200-byte names is roughly 900 KiB of JSON.
+    const longName = "n".repeat(190);
     await Promise.all(
-      Array.from({ length: 600 }, (_unused, index) => writeFile(join(root, `f${index}.txt`), "x")),
+      Array.from({ length: 3000 }, (_unused, index) =>
+        writeFile(join(root, `${longName}-${String(index).padStart(4, "0")}.txt`), "x"),
+      ),
     );
     const outcome = await new Promise<{ code: number | null; signal: string | null; received: number }>((resolvePromise) => {
       const child = spawn(process.execPath, [cliPath, "lock", "skill", "--out", "epipe.lock.json", "--json"], { cwd: temp });
@@ -366,16 +372,18 @@ describe("§12: a stdout consumer that closes early cannot manufacture a false s
     const bytes = await readFile(join(temp, "epipe.lock.json"));
     const validation = validateApprovalRecord(bytes);
     expect(validation.ok, "the lock is written and fsynced before stdout is touched").toBe(true);
-    if (validation.ok) expect(validation.record.files.length).toBe(602);
+    if (validation.ok) expect(validation.record.files.length).toBe(3002);
+    expect(bytes.length).toBeGreaterThan(512 * 1024);
 
     // The drift and invalid-record codes are reserved; a broken pipe is neither.
     expect(outcome.code).not.toBe(2);
     expect(outcome.code).not.toBe(3);
-    if (outcome.received < bytes.length) {
-      // Observation: the write rejects with EPIPE, which surfaces as an unhandled
-      // 'error' event on stdout — exit 1 with a Node stack trace rather than a
-      // sigildex-shaped message. It is a non-zero code, so §12 holds.
-      expect(outcome.code === null ? "signal" : outcome.code, `signal ${outcome.signal ?? "none"}`).not.toBe(0);
-    }
+    // The reader took at most one chunk of a record far larger than the pipe,
+    // so the child could not have delivered it all: the write rejects with
+    // EPIPE, which surfaces as an unhandled 'error' event on stdout — exit 1
+    // with a Node stack trace rather than a sigildex-shaped message. It is a
+    // non-zero code, so §12 holds.
+    expect(outcome.received).toBeLessThan(bytes.length);
+    expect(outcome.code === null ? "signal" : outcome.code, `signal ${outcome.signal ?? "none"}`).not.toBe(0);
   }, 120_000);
 });
