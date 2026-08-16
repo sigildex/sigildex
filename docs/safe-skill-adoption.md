@@ -133,23 +133,23 @@ the tool's current documentation before relying on exact syntax.*
 
 **NVIDIA SkillSpector** — <https://github.com/NVIDIA/skillspector>
 
-<!-- external-command smoke: 2026-08-16 PASS (skillspector 2.9.5) -->
-
 ```sh
 uv tool install git+https://github.com/NVIDIA/skillspector.git
 skillspector scan ~/skill-review/log-summarizer --no-llm --format json --output ~/skill-review/skillspector.json
 ```
 
-`--no-llm` restricts it to static pattern and AST analysis, which needs no API
-key and no network; omit it to enable semantic evaluation through a configured
-model provider. To run it without installing it first, use
+`--no-llm` restricts it to static pattern and AST analysis: nothing is sent to a
+model provider, and no API key is needed. Omit it to enable semantic evaluation
+through a configured model provider. Note that `--no-llm` is not the same as
+running with no network at all — its static dependency check may query OSV.dev
+for advisories, falling back to local analysis when it cannot reach the service.
+Check its documentation for the current behavior if network egress from your
+review environment matters. To run it without installing it first, use
 `uvx --from git+https://github.com/NVIDIA/skillspector.git skillspector scan …`.
 It exits non-zero on a do-not-install verdict while still writing a valid
 report, so read the JSON file rather than branching on the exit code.
 
 **Cisco AI Defense Skill Scanner** — <https://github.com/cisco-ai-defense/skill-scanner>
-
-<!-- external-command smoke: 2026-08-16 PASS (skill-scanner 2.0.13) -->
 
 ```sh
 pip install cisco-ai-skill-scanner
@@ -163,16 +163,29 @@ keys some of them require.
 
 **Snyk Agent Scan** — <https://github.com/snyk/agent-scan>
 
-<!-- external-command smoke: 2026-08-16 BLOCKED (requires SNYK_TOKEN); command reshaped per docs -->
-
 ```sh
-SNYK_TOKEN=<your-token> uvx snyk-agent-scan@latest scan --json
+SNYK_TOKEN=<your-token> uvx snyk-agent-scan@0.5.17 ~/skill-review/log-summarizer
 ```
 
-Agent Scan requires a Snyk API token and is machine-scoped rather than
-directory-scoped: it finds skills in well-known install locations. It suits
-auditing what is already installed, not pointing at a single quarantined
-directory — use SkillSpector or the Cisco scanner for that step.
+`0.5.17` is the current release as of 2026-08-16; pin deliberately rather than
+tracking `@latest`. Per the tool's documentation it accepts a skill directory or
+file path as a positional argument — **verify that syntax against its current
+documentation before relying on it**, since the command above was not executed
+for this guide (it requires a `SNYK_TOKEN`).
+
+Two cautions. Agent Scan's other mode is machine-wide: run without a path, it
+discovers agent components in well-known locations and **starts configured
+stdio MCP servers**, with consent, to enumerate them. That is a reasonable way
+to audit what you already run, and a bad thing to do in the middle of reviewing
+a quarantined candidate — starting local components is exactly what quarantine
+exists to prevent. If you use it during a candidate review, point it at the
+staged directory and nothing else. Second, the PyPI package declares no project
+URLs — `home_page`, `author`, and `maintainer` are all null — so the published
+metadata does not link back to a source repository. Confirm you are installing
+what you think you are before running it.
+
+For scanning a single quarantined directory, SkillSpector and the Cisco scanner
+are the more direct fit.
 
 If a scanner's syntax has changed since this guide was written, the shape of the
 step has not: *point a scanner at the quarantined directory, capture
@@ -357,8 +370,6 @@ With the GitHub CLI (`gh skill` is built in from version 2.90.0 onward and is
 still labelled **preview** in its own help, so it is subject to change; checked
 against the manual, <https://cli.github.com/manual/gh_skill_update>, as of
 2026-08-16 — verify against the tool's current documentation):
-
-<!-- external-command smoke: 2026-08-16 PASS (gh 2.97.0) -->
 
 ```sh
 gh skill update --dry-run
@@ -577,8 +588,12 @@ do something it should not:
 4. Check whether the same skill is installed anywhere else — other machines,
    other repositories, CI images.
 5. Treat any credential the skill could reach as exposed, and rotate it. The
-   approval baseline tells you exactly which files were present and what they
-   contained; it tells you nothing about what already ran.
+   approval baseline tells you exactly which files were present — their paths,
+   sizes, SHA-256 digests, executable bits, and classes. It does **not** store
+   their contents, so it is not something a responder can read the skill back
+   out of: recover the approved contents from the reviewed commit, or from
+   whatever copy of the artifact you retained. And it tells you nothing about
+   what already ran.
 
 **Rollback to a previously approved artifact.** Because both the artifact and
 its record live in Git, a previous approved state is a previous commit. Restore

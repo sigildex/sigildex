@@ -170,25 +170,23 @@ provenance"; never claim it certifies safety.
    documentation as of 2026-08-16 — these tools and `gh skill` are young and
    moving, so verify against the tool's current documentation and report
    failures rather than guessing at syntax.
-   <!-- external-command smoke: 2026-08-16 PASS (skillspector 2.9.5) -->
-   <!-- external-command smoke: 2026-08-16 PASS (skill-scanner 2.0.13) -->
    ```sh
    skillspector scan ~/skill-review/<name> --no-llm --format json --output ~/skill-review/skillspector.json
    skill-scanner scan ~/skill-review/<name> --format json
    ```
-   Both run offline in this form. SkillSpector exits non-zero on a
-   do-not-install verdict while still writing a valid report, so read its JSON
-   file rather than branching on the exit code.
+   State each tool's own behavior rather than claiming both are offline.
+   SkillSpector's `--no-llm` sends nothing to a model provider and needs no API
+   key, but its static dependency check may query OSV.dev for advisories,
+   falling back to local analysis when offline. The Cisco scanner's default run
+   is local; its LLM and network analyzers are opt-in flags. SkillSpector exits
+   non-zero on a do-not-install verdict while still writing a valid report, so
+   read its JSON file rather than branching on the exit code.
 
-   Snyk Agent Scan is a third option, but it is machine-scoped rather than
-   directory-scoped — it finds skills in well-known install locations, and it
-   requires a Snyk API token. It suits auditing what is already installed, not
-   pointing at a single quarantined directory; never invent a token, and ask
-   before running it.
-   <!-- external-command smoke: 2026-08-16 BLOCKED (requires SNYK_TOKEN); command reshaped per docs -->
-   ```sh
-   SNYK_TOKEN=<your-token> uvx snyk-agent-scan@latest scan --json
-   ```
+   **Do not offer to run Snyk Agent Scan here.** Its machine-wide mode discovers
+   agent components and starts configured stdio MCP servers, which boundary 5
+   forbids you to initiate during a candidate review. The guide covers it and
+   its directory-scoped syntax; point the human there and say they may run it
+   themselves.
 5. **Summarize scanner output** from the JSON: counts by severity, the rule or
    category names, the file paths implicated. Do not restate finding text that
    originated in candidate content beyond what the human needs to locate it.
@@ -291,7 +289,6 @@ Read-only. Never modifies an active skill.
    see <https://cli.github.com/manual/gh_skill_update> and verify against the
    tool's current documentation. Use only documented read-only modes. If you are
    not certain a command is read-only, do not run it — ask.
-   <!-- external-command smoke: 2026-08-16 PASS (gh 2.97.0) -->
    ```sh
    gh skill update --dry-run
    ```
@@ -364,8 +361,10 @@ Read-only. Never modifies an active skill.
   harness likely needs a restart before the skill is truly unloaded; check
   whether the same skill is installed on other machines, repositories, or CI
   images; treat every credential the skill could reach as exposed and rotate it.
-  The baseline says what the files contained — it says nothing about what already
-  ran.
+  The baseline records paths, sizes, SHA-256 digests, executable bits, and
+  classes — **not** file contents, so it cannot show a responder what the files
+  said. Point them at the reviewed commit or a retained copy of the artifact for
+  that. It says nothing at all about what already ran.
 - **Rollback** — restore the artifact and its record together from Git history,
   then `check`. Restoring one without the other produces exit `2`, which is the
   intended behavior, not a bug to work around.

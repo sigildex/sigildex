@@ -1,10 +1,9 @@
 # Threat model
 
 What Sigildex is built to withstand, what ships to withstand it, and what is
-explicitly out of scope. Behaviors below are cited to the normative
-[identity specification](identity-spec.md) and to the CI workflow in
-[ci/approval-check.yml](ci/approval-check.yml); nothing here claims a property
-those documents do not define.
+explicitly out of scope. Behaviors below are cited where the normative
+[identity specification](identity-spec.md) or the CI workflow in
+[ci/approval-check.yml](ci/approval-check.yml) defines them.
 
 ## Assets
 
@@ -67,8 +66,10 @@ skill is executed, sourced, or installed.
 **A pull request that compares itself against a broken baseline.** The base
 revision is proved self-consistent before any branch that can succeed, using the
 base commit from the event payload rather than a branch name that may have
-moved. A trigger that supplies no base commit is refused rather than treated as
-"nothing changed".
+moved. A trigger that supplies no base commit is refused outright: the workflow's
+own comment records why, which is that an empty diff spec would fail in a way
+that reads as **changed** — a pass built on nothing — rather than as "nothing
+changed".
 
 **TOCTOU and mid-walk mutation.** The walk is a two-pass snapshot-verify
 protocol (specification section 6.2): files are opened without following
@@ -77,11 +78,17 @@ them, streamed from the descriptor, and re-verified afterwards on
 `(dev, inode, size, mtime, ctime)`. Directories are re-checked with an `lstat`,
 a re-enumeration, and a closing `lstat`, which catches files added after their
 parent was enumerated. Any mismatch is exit `1`, never a verdict. The
-specification states the limit plainly: a mutation initiated after an
+specification states two limits plainly. First, a mutation initiated after an
 observation's final verification time is outside the measurement window, and no
-userspace scan can bind bytes after the tool returns. Consumers needing stronger
-assurance copy the artifact somewhere they exclusively control and verify the
-copy.
+userspace scan can bind bytes after the tool returns. Second, timestamps are
+compared at the platform's full stored resolution, and a same-size, same-inode
+rewrite is caught via `ctime`, which an unprivileged writer cannot suppress —
+but a rewrite falling within the filesystem's timestamp granularity *and* racing
+the verification instant is theoretically undetectable without rehashing.
+Implementations may rehash during pass 2 to narrow that window; the tuple
+comparison is the normative floor (specification section 6.2). Consumers needing
+stronger assurance copy the artifact somewhere they exclusively control and
+verify the copy.
 
 **Symlink escape.** Any symlink anywhere under the skill root fails the command
 closed with the path named, whether it points inside the tree, outside it, or
@@ -147,6 +154,13 @@ verdict.
   model should delete every `frontmatter` object first — the documented reducer
   is in [safe-skill-adoption.md](safe-skill-adoption.md) and in the Agent Skill —
   which reduces exposure without being a security boundary.
+- **The gate's own dependency is resolved, not pinned.** The workflow installs
+  the tool at a pinned version outside the checkout, but the tool's one runtime
+  dependency, `yaml`, is a semver range resolved from the registry at install
+  time and is not pinned by digest. A consumer who wants a hermetic gate should
+  vendor a `package-lock.json` alongside the tool's `package.json` and install
+  with `npm ci`, or bundle the tool. Pinning the tool version bounds which code
+  is requested; it does not by itself bound what the registry serves beneath it.
 - **Branch protection can be bypassed by an administrator.** These are
   repository settings, not cryptography. What the setup buys is that unreviewed
   approval becomes a visible administrative act rather than an ordinary commit.
