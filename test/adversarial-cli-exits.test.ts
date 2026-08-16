@@ -366,15 +366,18 @@ describe("§12: a stdout consumer that closes early cannot manufacture a false s
         writeFile(join(root, `${longName}-${String(index).padStart(4, "0")}.txt`), "x"),
       ),
     );
-    const outcome = await new Promise<{ code: number | null; signal: string | null; received: number }>((resolvePromise) => {
+    const outcome = await new Promise<{ code: number | null; signal: string | null; received: number; stderr: string }>((resolvePromise) => {
       const child = spawn(process.execPath, [cliPath, "lock", "skill", "--out", "skill.lock.json", "--json"], { cwd: temp });
       let received = 0;
       child.stdout.once("data", (chunk: Buffer) => {
         received += chunk.length;
         child.stdout.destroy();
       });
-      child.stderr.resume();
-      child.on("close", (code, signal) => resolvePromise({ code, signal, received }));
+      let stderr = "";
+      child.stderr.on("data", (chunk: Buffer) => {
+        stderr += chunk.toString("utf8");
+      });
+      child.on("close", (code, signal) => resolvePromise({ code, signal, received, stderr }));
     });
 
     const bytes = await readFile(join(temp, "skill.lock.json"));
@@ -388,10 +391,11 @@ describe("§12: a stdout consumer that closes early cannot manufacture a false s
     expect(outcome.code).not.toBe(3);
     // The reader took at most one chunk of a record far larger than the pipe,
     // so the child could not have delivered it all: the write rejects with
-    // EPIPE, which surfaces as an unhandled 'error' event on stdout — exit 1
-    // with a Node stack trace rather than a sigildex-shaped message. It is a
-    // non-zero code, so §12 holds.
+    // EPIPE, which the CLI reports as a tool error (exit 1) with a one-line
+    // message and no stack trace.
     expect(outcome.received).toBeLessThan(bytes.length);
-    expect(outcome.code === null ? "signal" : outcome.code, `signal ${outcome.signal ?? "none"}`).not.toBe(0);
+    expect(outcome.code, `signal ${outcome.signal ?? "none"}`).toBe(1);
+    expect(outcome.stderr).toContain("stdout closed before the output was written");
+    expect(outcome.stderr).not.toContain("node:internal");
   }, 120_000);
 });
