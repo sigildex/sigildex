@@ -16,6 +16,15 @@
  * zero-width marks, the byte-order mark, and the line/paragraph separators —
  * carry no glyph but reorder or hide the text around them, which lets an
  * untrusted frontmatter value misrepresent what a reviewer is approving.
+ *
+ * Enumerating those by hand cannot be complete: the tag block (U+E0000 to
+ * U+E007F) re-encodes the whole of ASCII as characters no terminal shows,
+ * which hides an entire second string inside a name that looks ordinary. So
+ * the explicit list is backed by a general-category rule covering every
+ * format, private-use, and unassigned code point. Private-use and unassigned
+ * code points have no defined appearance at all, so what a reader sees is a
+ * property of their font rather than of the value being approved. Assigned,
+ * visible text — accented Latin, CJK, emoji — is never touched.
  */
 
 /** C0, DEL, and the single-byte C1 controls. */
@@ -23,15 +32,24 @@ function isTerminalControl(codePoint: number): boolean {
   return codePoint <= 0x1f || (codePoint >= 0x7f && codePoint <= 0x9f);
 }
 
-/** Zero-width marks, bidi controls and isolates, separators, and the BOM. */
-function isInvisibleFormat(codePoint: number): boolean {
+/** Format, private-use, and unassigned code points — nothing with a defined glyph. */
+const UNTRUSTWORTHY_CATEGORIES = /[\p{Cf}\p{Co}\p{Cn}]/u;
+
+/**
+ * Zero-width marks, bidi controls and isolates, separators, and the BOM, plus
+ * every format, private-use, and unassigned code point. The named ranges stay
+ * explicit because two of them — the line and paragraph separators — are
+ * separators rather than format characters, so no category rule reaches them.
+ */
+function isInvisibleFormat(character: string, codePoint: number): boolean {
   return (
     (codePoint >= 0x200b && codePoint <= 0x200f) ||
     codePoint === 0x2028 ||
     codePoint === 0x2029 ||
     (codePoint >= 0x202a && codePoint <= 0x202e) ||
     (codePoint >= 0x2066 && codePoint <= 0x2069) ||
-    codePoint === 0xfeff
+    codePoint === 0xfeff ||
+    UNTRUSTWORTHY_CATEGORIES.test(character)
   );
 }
 
@@ -48,15 +66,30 @@ export function sanitizeForTerminal(value: string): string {
   for (const character of value) {
     const codePoint = character.codePointAt(0)!;
     if (isTerminalControl(codePoint)) escaped += `\\x${hex(codePoint, 2)}`;
-    else if (isInvisibleFormat(codePoint)) escaped += `\\u{${hex(codePoint, 4)}}`;
+    else if (isInvisibleFormat(character, codePoint)) escaped += `\\u{${hex(codePoint, 4)}}`;
     else escaped += character;
   }
   return escaped;
 }
 
-/** Shortens a display string; sanitization runs first so escapes are counted. */
+/**
+ * Shortens a display string; sanitization runs first so escapes are counted.
+ * The bound counts code points, so an astral character straddling the cut is
+ * kept or dropped whole — half a surrogate pair is not a character, and what a
+ * terminal makes of one is undefined.
+ */
 export function truncateForDisplay(value: string, maxLength = 160): string {
-  return value.length <= maxLength ? value : `${value.slice(0, maxLength)}…`;
+  // A string no longer than the bound in UTF-16 units cannot exceed it in code
+  // points either, so the common case never walks the string.
+  if (value.length <= maxLength) return value;
+  let kept = "";
+  let counted = 0;
+  for (const character of value) {
+    if (counted === maxLength) return `${kept}…`;
+    kept += character;
+    counted += 1;
+  }
+  return kept;
 }
 
 /** Sanitizes and bounds an untrusted string for human-readable output. */

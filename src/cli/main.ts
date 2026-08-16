@@ -4,7 +4,7 @@ import { parseArgs } from "node:util";
 import { check } from "../check.js";
 import { diff } from "../diff/diff.js";
 import { validateRecordedPath } from "../identity/walk.js";
-import { lock, TOOL_VERSION } from "../lock.js";
+import { lock, serializeJsonDocument, TOOL_VERSION } from "../lock.js";
 import { DECLARED_SOURCE_FIELDS, validateDeclaredSource, type DeclaredSource } from "../schema/validate.js";
 import { renderDiffReport, renderDriftReport, renderLockSummary, renderMatch } from "./render.js";
 import { displayString, sanitizeForTerminal } from "./sanitize.js";
@@ -16,6 +16,22 @@ const EXIT_INVALID_RECORD = 3;
 
 const APPROVAL_ID_GRAMMAR = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const TOOL_VERSION_GRAMMAR = /^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/;
+
+/**
+ * §12.1: each side's `skill` object carries the artifact's shape verbatim with
+ * its object keys serialized in byte-wise sorted order. Everything else in a
+ * report is schema-controlled structure and keeps its declared key order.
+ */
+const DIFF_SORTED_SUBTREES: ReadonlySet<string> = new Set(["skill"]);
+
+/**
+ * Choosing `--json` is a presentation choice and never a verdict: a report that
+ * cannot be serialized would otherwise be reported as a tool error on a tree
+ * that human mode calls drift.
+ */
+function jsonDocument(value: unknown, sortedSubtrees?: ReadonlySet<string>): string {
+  return `${serializeJsonDocument(value, sortedSubtrees === undefined ? {} : { sortedSubtrees })}\n`;
+}
 
 const USAGE = `sigildex — record what you approved, detect when it changes.
 
@@ -243,16 +259,10 @@ async function runCheck(args: readonly string[]): Promise<number> {
       );
       return EXIT_INVALID_RECORD;
     case "match":
-      write(
-        process.stdout,
-        values.json ? `${JSON.stringify(result.record, null, 2)}\n` : renderMatch(result.record),
-      );
+      write(process.stdout, values.json ? jsonDocument(result.record) : renderMatch(result.record));
       return EXIT_OK;
     case "drift":
-      write(
-        process.stdout,
-        values.json ? `${JSON.stringify(result.report, null, 2)}\n` : renderDriftReport(result.report),
-      );
+      write(process.stdout, values.json ? jsonDocument(result.report) : renderDriftReport(result.report));
       return EXIT_DRIFT;
   }
 }
@@ -274,7 +284,9 @@ async function runDiff(args: readonly string[]): Promise<number> {
   const identical = result.kind === "identical";
   write(
     process.stdout,
-    values.json ? `${JSON.stringify(result.report, null, 2)}\n` : renderDiffReport(result.report, identical),
+    values.json
+      ? jsonDocument(result.report, DIFF_SORTED_SUBTREES)
+      : renderDiffReport(result.report, identical),
   );
   return identical ? EXIT_OK : EXIT_DRIFT;
 }

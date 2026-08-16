@@ -74,6 +74,19 @@ beforeAll(async () => {
 });
 
 describe("published diff-report schema matches the emitted report", () => {
+  it("states on its face that it is a structural subset, not the contract", () => {
+    // The same honesty the approval-record schema carries: `maxLength` counts
+    // code points where the specification counts UTF-8 bytes, and ordering and
+    // category exclusivity are properties of the emitter, not of the shape.
+    expect(typeof schema["description"]).toBe("string");
+    expect(typeof schema["$comment"]).toBe("string");
+    expect(schema["description"] as string).toMatch(/structural subset/i);
+    expect(schema["$comment"] as string).toMatch(/UTF-8 BYTES/);
+    expect(schema["$comment"] as string).toMatch(/unassigned in Unicode 15\.1/);
+    expect(schema["$comment"] as string).toMatch(/order/i);
+  });
+
+
   it("produces a fixture report that populates every category", () => {
     expect(report.added).toHaveLength(1);
     expect(report.removed).toHaveLength(1);

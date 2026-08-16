@@ -68,6 +68,12 @@ function sameSize(left: number | bigint, right: number | bigint): boolean {
   return BigInt(left) === BigInt(right);
 }
 
+/**
+ * Both sides of a `diff` are walked trees, and §11 caps a single file at
+ * 64 MiB, so a reported size is always far inside the exactly-representable
+ * range. A size that only a hand-written record can carry (§9.1 admits any
+ * non-negative integer) never reaches here.
+ */
 function fileState(entry: ManifestEntry): DiffFileState {
   return { sha256: entry.sha256, size: Number(entry.size), executable: entry.executable };
 }
@@ -82,11 +88,24 @@ function presentEntry(entry: ManifestEntry): DiffPresentEntry {
   };
 }
 
-/** Recursively orders object keys byte-wise so the report is byte-reproducible. */
+/**
+ * Recursively orders object keys byte-wise so the report is byte-reproducible.
+ *
+ * The mapping has a null prototype for two reasons. A `__proto__` key from an
+ * artifact is then an ordinary data member rather than a write through the
+ * legacy prototype setter, which would drop it from the report entirely — the
+ * shape is carried verbatim (§12.1), and a key an attacker controls is exactly
+ * the one a reader must still see. And a lookup for an absent key answers
+ * "absent" instead of returning something inherited from `Object.prototype`.
+ *
+ * This settles the in-memory order only: an integer-like key is enumerated
+ * ahead of its siblings whatever order it was inserted in, so the emitted byte
+ * order is established again at serialization time.
+ */
 function orderJsonKeys(value: JsonValue): JsonValue {
   if (Array.isArray(value)) return value.map(orderJsonKeys);
   if (value === null || typeof value !== "object") return value;
-  const ordered: Record<string, JsonValue> = {};
+  const ordered = Object.create(null) as Record<string, JsonValue>;
   for (const key of Object.keys(value).sort(compareUtf8)) ordered[key] = orderJsonKeys(value[key]!);
   return ordered;
 }

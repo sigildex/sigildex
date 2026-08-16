@@ -50,7 +50,9 @@ export function renderLockSummary(record: ApprovalRecord, outputPath: string): s
       if (frontmatter[key] !== undefined) lines.push(field(`  ${key}`, formatValue(frontmatter[key])));
     }
   }
-  lines.push(field("written to", outputPath), IDENTITY_NOTE);
+  // A directory name may carry anything the filesystem accepts, escape
+  // sequences included, so the path we echo back is untrusted like any other.
+  lines.push(field("written to", displayString(outputPath)), IDENTITY_NOTE);
   return `${lines.join("\n")}\n`;
 }
 

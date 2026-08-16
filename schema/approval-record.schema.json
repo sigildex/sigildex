@@ -2,6 +2,8 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://sigildex.dev/schema/approval-record.schema.json",
   "title": "Sigildex approval record",
+  "description": "A STRUCTURAL SUBSET of the approval-record contract in docs/identity-spec.md. Passing this schema does not mean `sigildex check` will accept the record; `sigildex check` is authoritative and the specification wins on any disagreement.",
+  "$comment": "What this schema cannot express, and therefore does not check: (1) String length. The specification measures `declared_source.repository` (512), `declared_source.tracking_policy` (128) and recorded paths (1024) in UTF-8 BYTES (§9.1, §4.2, §11); JSON Schema `maxLength` counts code points. Every `maxLength` here is a correct upper bound — nothing the validator accepts is rejected here — but a string of non-ASCII code points can satisfy this schema and still exceed the byte limit, so such a record passes here and is rejected by `sigildex check`. (2) Unicode rules on recorded paths: §4.2 rule 4 rejects any code point unassigned in Unicode 15.1, and lone surrogates; `recordedPath` below encodes only the §4.1 form rules and the control-character ban. (3) Manifest integrity and internal consistency: §9.5 steps 4 and 5 require `files[]` to be in exact byte order, free of duplicate and §4.3-colliding paths, and require `root_digest` to equal the digest recomputed from `files[]`. No JSON Schema can state any of that. A hand-edited record whose `root_digest` does not match its own manifest validates here and is rejected, exit 3, by `sigildex check`.",
   "type": "object",
   "$defs": {
     "recordedPath": {

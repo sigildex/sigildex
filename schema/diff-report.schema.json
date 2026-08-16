@@ -2,6 +2,8 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://sigildex.dev/schema/diff-report.schema.json",
   "title": "Sigildex diff report",
+  "description": "A STRUCTURAL SUBSET of the report contract in docs/identity-spec.md §12.1. It describes the shape of a report `sigildex diff` emits; the specification wins on any disagreement.",
+  "$comment": "What this schema cannot express, and therefore does not check: (1) String length. The specification measures the recorded-path limit (1024) in UTF-8 BYTES (§4.2, §11); JSON Schema `maxLength` counts code points, so the `maxLength` below is a correct upper bound but not the real limit. (2) Unicode rules on recorded paths: §4.2 rule 4 rejects any code point unassigned in Unicode 15.1, and lone surrogates; `recordedPath` below encodes only the §4.1 form rules and the control-character ban. (3) Report ordering and category exclusivity: §12.1 requires each differing path to appear in exactly one of `added`/`removed`/`changed`, and entries within each array to be in §7.2 byte-wise path order. Those are properties of the emitting implementation, not of the document shape.",
   "type": "object",
   "$defs": {
     "recordedPath": {

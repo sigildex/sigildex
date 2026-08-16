@@ -10,6 +10,18 @@
   project's responsibility.
 - §9.4 — records that `declared_source` is settable at write time, and names
   the flags that do it.
+- §9.1 / §12.1 — the published JSON Schemas are described truthfully as a
+  structural subset of this specification; the validator is authoritative.
+- §3.2 / §6.2 — pass 2 re-verifies every excluded-name entry (type and
+  identity), and pass-1 opens use `O_NONBLOCK` alongside `O_NOFOLLOW`. These
+  strengthen the fail-closed guarantee; they do not change what a quiescent
+  tree hashes to.
+- §10 — the `SKILL.md` read follows the same open discipline, and block
+  extraction is independent of read buffering.
+- §9.5 / §12 / §12.1 / §15 — `size` is carried exactly at any magnitude; the
+  output mode never changes a verdict; byte-wise key order is a requirement
+  on emitted bytes and host-significant keys are ordinary data; the escaped
+  character families for terminal output are named.
 
 This document defines how Sigildex computes the content identity of an Agent
 Skill directory. It is the normative contract for the `lock`, `check`, and
@@ -83,10 +95,11 @@ Exactly two names are excluded, at any depth:
 including entries with excluded names — is first `lstat`-validated per §5. A
 symlink or special file named `.git` or `.sigildex` **fails closed** under §5;
 it is not silently pruned. Only a verified regular directory or regular file
-with an excluded name is excluded. (Two conforming implementations must never
-disagree on whether an excluded-name symlink is an error: it is.) Excluded
-entries still count toward the traversal-entry limit (§11) and still
-participate in the §4.3 collision comparison.
+with an excluded name is excluded, and that validation must still hold at the
+entry's final verification time (§6.2 pass 2, step 3). (Two conforming
+implementations must never disagree on whether an excluded-name symlink is an
+error: it is.) Excluded entries still count toward the traversal-entry limit
+(§11) and still participate in the §4.3 collision comparison.
 
 There is no other exclusion, no ignore-file support, and no user-configurable
 exclusion in spec version 1. Adding any exclusion is a spec-version change.
@@ -227,9 +240,14 @@ walk is a **snapshot-verify protocol** with two passes over the tree.
    `(dev, inode)`, and record the complete sorted list of its entry names
    (excluded names included).
 2. For every entry: `lstat`; symlinks and special files → §5 fail-closed.
+   For every entry with an excluded name (§3.2) that passes this validation,
+   record its type and `(dev, inode)`; nothing beneath it is walked.
 3. For every in-scope regular file:
-   a. open **without following symlinks** (`O_NOFOLLOW` where the platform
-      provides it — both supported platforms do);
+   a. open **without following symlinks** and **without blocking**
+      (`O_NOFOLLOW | O_NONBLOCK` where the platform provides them — both
+      supported platforms do; `O_NONBLOCK` is inert for a regular file and
+      keeps an `open` on a FIFO substituted after the `lstat` from blocking
+      indefinitely — the `fstat` in 3b then fails it closed);
    b. `fstat` the open descriptor; verify it is still a regular file and its
       `(dev, inode)` matches the `lstat` result — mismatch → fail closed;
    c. stream the file through SHA-256 from the descriptor, subject to the
@@ -258,6 +276,12 @@ output is written):
    `fstat` (ctime moves on a same-size in-place rewrite or metadata change
    and cannot be suppressed by an unprivileged writer; see the guarantee
    statement below for the granularity-bounded exception).
+3. Re-`lstat` every entry recorded with an excluded name: it must still be a
+   non-symlink, non-special entry of the same type with the same
+   `(dev, inode)`. Contents beneath it stay out of scope. Such a swap leaves
+   the parent's entry-name list unchanged, so the parent's re-enumeration
+   cannot see it — this step is what makes §3.2's type validation hold at
+   final verification time.
 
 Any pass-2 mismatch means the filesystem mutated during the walk: **fail
 closed (exit 1)**, naming the first mismatched path. Any read error
@@ -497,8 +521,35 @@ differ between two locks that identify the same artifact. `root_digest` is
 **derived** from `files[]` by the §8.2 construction — a lock where the two
 disagree is internally inconsistent and invalid (§9.5).
 
-The published `schema/approval-record.schema.json` is generated from this
-table and MUST match it; where they disagree, this specification wins.
+**The published schema is a structural subset, not the contract.**
+`schema/approval-record.schema.json` is derived from this table and MUST NOT
+contradict it, but it is deliberately weaker than it: JSON Schema cannot state
+every rule above, so validating against the schema is a shape check, never an
+acceptance test. The validator (`sigildex check`, §9.5) is authoritative, and
+where the two disagree, this specification wins. The schema is weaker in three
+specific ways, each stated in the schema's own `$comment`:
+
+1. **Length is measured in the wrong unit.** Every string limit here —
+   `declared_source.repository` (512), `declared_source.tracking_policy` (128),
+   recorded paths (1,024, §11) — is UTF-8 **bytes**. JSON Schema `maxLength`
+   counts code points. The published `maxLength` values are therefore correct
+   **upper bounds** (nothing the validator accepts is rejected by the schema),
+   but a string of non-ASCII code points can satisfy the schema and still
+   exceed the byte limit. Such a record passes the schema and is rejected by
+   `check`.
+2. **Unicode assignment rules are absent.** §4.2 rule 4 (no code point
+   unassigned in Unicode 15.1, no lone surrogate) has no JSON Schema
+   expression; the published `recordedPath` encodes only the §4.1 form rules
+   and the control-character ban.
+3. **§9.5 steps 4–5 are absent.** Manifest sortedness, path uniqueness,
+   §4.3 collision-freedom, and the recomputed-`root_digest` consistency check
+   are not properties of a document's shape and cannot be schema-expressed. A
+   hand-edited record whose `root_digest` does not match its own `files[]`
+   validates against the schema and exits 3 under `check`.
+
+A consumer that validates a record only against the published schema has
+checked its shape, not its validity. Only `check`'s §9.5 algorithm decides
+whether a record may be compared against an artifact.
 
 ### 9.2 Serialization stability
 
@@ -575,8 +626,10 @@ order — any failure is "invalid approval-record schema", exit 3:
 3. **Shape** — exactly the §9.1 keys, correct types, no unknown keys at
    top level or in `files[]` entries; field grammars hold (`approval_id`
    pattern, `sha256` = 64 lowercase hex, `root_digest` prefix and length,
-   `size` a non-negative integer, `class` one of the §7.3 values, `path`
-   satisfying every §4.1/§4.2 rule).
+   `size` a non-negative integer — carried exactly and emitted as an unquoted
+   JSON integer at any magnitude, since a hand-written record may hold a size
+   no IEEE double represents and §8.2 hashes its decimal digits — `class` one
+   of the §7.3 values, `path` satisfying every §4.1/§4.2 rule).
 4. **Manifest integrity** — `files[]` paths are unique, in exact §7.2 byte
    order, and free of §4.3 collisions.
 5. **Internal consistency** — recompute the §8.2 root digest from `files[]`;
@@ -609,6 +662,17 @@ implementation and exit 2 in another.
    the frontmatter block, must reject aliases/anchors expansion beyond a fixed
    small budget, and must not execute or resolve custom tags. Parser failure
    or resource exhaustion → `frontmatter_status: "invalid"`, never a crash.
+5. The `SKILL.md` read follows the §6.2 open discipline (`O_NOFOLLOW |
+   O_NONBLOCK`, then `fstat` and require a regular file). A path that cannot
+   be read as a regular file is a tool error (exit 1), never a
+   `frontmatter_status`: `"missing"` and `"invalid"` describe bytes that were
+   actually read.
+6. Block extraction MUST NOT depend on the reader's buffering: an
+   unterminated final line may serve as the closing delimiter only at end of
+   file, and a line of `----` (or any line other than exactly `---`) is never
+   a delimiter regardless of where reads split. The same bytes yield the
+   same `frontmatter_status` and `frontmatter` in every implementation
+   (§8.4).
 
 ## 11. Limits (fail closed, exit 1)
 
@@ -698,7 +762,10 @@ Evaluation order:
 Exit codes: `0` — both walks completed and the trees' root digests are equal;
 `2` — both walks completed and the trees differ; `1` — either walk failed.
 `diff` never exits 3 (no lock is involved). A partial report from one
-complete and one failed walk is never emitted.
+complete and one failed walk is never emitted. For every command, the output
+mode never changes the verdict: the same inputs yield the same exit code in
+human and `--json` mode, and a failure to serialize a report is never
+permitted to turn a drift (2) or an invalid record (3) into a tool error (1).
 
 **Report contract (normative).** Every differing path appears in **exactly
 one** of three mutually exclusive categories:
@@ -730,10 +797,20 @@ underlying report (and the `--json` output) is the flat ordered structure:
 ```
 
 This inline shape is normative and complete — there is no other key; the
-JSON Schema published with the implementation must match it (spec wins on
-disagreement, as with §9.1). That schema is
-`schema/diff-report.schema.json`. The two `skill` objects carry each side's §9.1
-skill shape verbatim (object keys serialized in byte-wise sorted order), so
+JSON Schema published with the implementation must not contradict it (spec
+wins on disagreement, as with §9.1). That schema is
+`schema/diff-report.schema.json`, and it is a structural subset for the same
+reasons §9.1 gives: its recorded-path `maxLength` counts code points where
+§11 counts UTF-8 bytes, it cannot express §4.2 rule 4, and it cannot express
+this section's ordering and category-exclusivity requirements. It describes
+the shape of a report; the emitting implementation is what makes the report
+conform. The two `skill` objects carry each side's §9.1
+skill shape verbatim (object keys serialized in byte-wise sorted order — a
+requirement on the emitted bytes, which an implementation must not derive
+from its host language's object-key enumeration order: `"10"` sorts before
+`"2"` byte-wise but enumerates after it in JavaScript; and keys with
+host-language significance such as `__proto__`, `constructor`, or
+`prototype` are ordinary data that must appear in the report), so
 a consumer can compute any frontmatter comparison it wants from exact
 inputs; the JSON report itself contains **no** computed frontmatter diff.
 A human renderer MAY additionally present a frontmatter comparison derived
@@ -786,8 +863,16 @@ canonical-serialization collisions (§8.1 — closed by the control-character
 ban and single-line format); lock self-inclusion (§3.3); malformed
 frontmatter and parser resource exhaustion (§10); malicious terminal or
 Markdown output (control characters cannot enter recorded paths per §4.2;
-all other untrusted strings — frontmatter values, `declared_source` — MUST be
-sanitized or escaped before terminal/Markdown emission); filesystem mutation
+all other untrusted strings — frontmatter values and keys, `declared_source`,
+and any path echoed into human output, including one supplied as an
+argument — MUST be sanitized or escaped before terminal/Markdown emission;
+the escaped families are C0, DEL, and C1 controls; bidirectional controls
+and isolates; zero-width and other format characters including the tag
+block; private-use and unassigned code points; truncation for display cuts
+on code-point boundaries. Terminal escaping is presentation only and never
+affects identity, reports, or exit codes; because unassigned code points
+depend on the runtime's Unicode tables, only the display may vary between
+runtimes); filesystem mutation
 during the walk (§6.2 — same-size in-place overwrites, ancestor-directory
 swaps, and late additions after enumeration are all pass-2 detections); and
 false-success exit paths (§12 — every error path must be shown to produce a

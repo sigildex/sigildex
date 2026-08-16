@@ -49,6 +49,8 @@ export type WalkResult = WalkSuccess | WalkFailure;
 export interface WalkHooks {
   /** Test seam invoked after pass 1 and before any pass-2 observation. */
   afterPass1?: () => void | Promise<void>;
+  /** Test seam invoked between an in-scope file's `lstat` and its `open`. */
+  beforeFileOpen?: (recordedPath: string) => void | Promise<void>;
   /** Test seam invoked after each descriptor read, with bytes hashed for that file. */
   afterFileChunk?: (recordedPath: string, hashedBytes: number) => void | Promise<void>;
 }
@@ -77,6 +79,14 @@ interface FileSnapshot {
   absolute: Buffer;
   recordedPath: string;
   identity: IdentityStat;
+}
+
+/** An entry with an excluded name (§3.2): pruned from the manifest, still observed. */
+interface ExcludedSnapshot {
+  absolute: Buffer;
+  recordedPath: string;
+  isDirectory: boolean;
+  identity: Pick<IdentityStat, "dev" | "ino">;
 }
 
 class ExpectedWalkFailure extends Error {
@@ -194,6 +204,36 @@ function equalEntryLists(left: readonly Buffer[], right: readonly Buffer[]): boo
   return left.length === right.length && left.every((entry, index) => entry.equals(right[index]!));
 }
 
+/**
+ * Pass-2 observation for an excluded entry (§3.2). Exclusion prunes what is *beneath*
+ * the entry, never the entry itself: pass 1 type-validates it before pruning, and this
+ * re-observation closes the window in which a verified `.git`/`.sigildex` directory or
+ * file is swapped for a symlink or special file afterwards. The parent's entry-name list
+ * is identical across such a swap, so only the entry's own type and `(dev, inode)` can
+ * see it. Contents beneath an excluded entry are out of scope and are not compared.
+ */
+async function verifyExcludedEntry(entry: ExcludedSnapshot): Promise<void> {
+  const named = entry.recordedPath;
+  let current;
+  try {
+    current = await lstatBigint(entry.absolute);
+  } catch (error) {
+    fail("read", `Cannot re-verify excluded entry ${named}: ${errorText(error)}`, { path: named });
+  }
+  if (current.isSymbolicLink()) {
+    fail("mutation", `Excluded entry became a symlink: ${named}`, { path: named });
+  }
+  if (!current.isFile() && !current.isDirectory()) {
+    fail("mutation", `Excluded entry became a special file: ${named}`, { path: named });
+  }
+  if (current.isDirectory() !== entry.isDirectory) {
+    fail("mutation", `Excluded entry changed type: ${named}`, { path: named });
+  }
+  if (current.dev !== entry.identity.dev || current.ino !== entry.identity.ino) {
+    fail("mutation", `Excluded entry identity changed: ${named}`, { path: named });
+  }
+}
+
 async function walkSkillInternal(
   skillRoot: string,
   options: WalkOptions,
@@ -223,6 +263,7 @@ async function walkSkillInternal(
 
     const directories: DirectorySnapshot[] = [];
     const files: FileSnapshot[] = [];
+    const excluded: ExcludedSnapshot[] = [];
     const manifest: ManifestEntry[] = [];
     let directoryCount = 0;
     let entryCount = 0;
@@ -290,7 +331,15 @@ async function walkSkillInternal(
         }
         equivalences.set(key, name);
 
-        if (name === ".git" || name === ".sigildex") continue;
+        if (name === ".git" || name === ".sigildex") {
+          excluded.push({
+            absolute: absoluteEntry,
+            recordedPath: entryPath,
+            isDirectory: entryStats.isDirectory(),
+            identity: { dev: entryStats.dev, ino: entryStats.ino },
+          });
+          continue;
+        }
         if (entryStats.isDirectory()) {
           await enumerate(absoluteEntry, entryPath, depth + 1);
           continue;
@@ -310,9 +359,12 @@ async function walkSkillInternal(
           fail("limit", `Single-file byte limit exceeded: ${entryPath}`, { path: entryPath, limit: "maxFileBytes" });
         }
 
+        if (options.hooks?.beforeFileOpen !== undefined) await options.hooks.beforeFileOpen(entryPath);
         let handle;
         try {
-          handle = await open(absoluteEntry, constants.O_RDONLY | constants.O_NOFOLLOW);
+          // O_NONBLOCK is inert for a regular file and is what keeps the open from parking
+          // on a FIFO swapped in after the lstat: it returns, and the fstat below rejects it.
+          handle = await open(absoluteEntry, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
           const descriptorStats = await handle.stat({ bigint: true });
           if (!descriptorStats.isFile()) fail("mutation", `Opened entry is no longer a regular file: ${entryPath}`, { path: entryPath });
           if (descriptorStats.dev !== entryStats.dev || descriptorStats.ino !== entryStats.ino) {
@@ -387,6 +439,7 @@ async function walkSkillInternal(
         fail("read", `Cannot re-verify directory ${named}: ${errorText(error)}`, { path: named });
       }
     }
+    for (const entry of excluded) await verifyExcludedEntry(entry);
     for (const file of files) {
       try {
         const current = await lstatBigint(file.absolute);

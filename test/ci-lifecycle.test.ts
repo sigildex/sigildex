@@ -7,9 +7,14 @@
  * *shallow* — the base commit is genuinely absent until the workflow's own
  * `git fetch --no-tags --depth=1 origin "$BASE_SHA"` brings it in.
  *
- * The tool call is redirected without touching the snippet's semantics: a `npx`
- * shim earlier on PATH drops the `--yes sigildex@<version>` arguments and execs
- * the local build, and every scenario asserts the shim is what ran.
+ * The tool call is redirected without touching the snippet's semantics. The
+ * snippet installs the tool into a directory outside the workspace and then
+ * invokes it by absolute path, so the redirection happens at install time: an
+ * `npm` shim earlier on PATH records the requested spec and materializes a
+ * stand-in executable at exactly the path the snippet asks for, which execs the
+ * local build. The install is therefore genuinely out-of-workspace here too —
+ * a scenario can commit a `node_modules/sigildex` into the pull request and the
+ * stand-in still runs.
  */
 import { execFileSync } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -66,6 +71,7 @@ function extractRunScript(stepName: string): string {
   return `${body.map((line) => line.slice(indent)).join("\n")}\n`;
 }
 
+const INSTALL = extractRunScript("Install the approval tool outside the workspace");
 const MATERIALIZE = extractRunScript("Materialize the base revision");
 const CHECK = extractRunScript("Check approval consistency");
 const SKILL_DIR = workflowEnv("SKILL_DIR");
@@ -80,6 +86,8 @@ type Files = Record<string, FileSpec>;
 interface Side {
   /** Absent means the skill directory does not exist on this side. */
   files?: Files;
+  /** Extra files committed at the repository root, outside the skill directory. */
+  extra?: Files;
   /** Defaults to the workflow's SKILL_DIR / APPROVAL. */
   skillDir?: string;
   approval?: string;
@@ -134,6 +142,7 @@ function sigildexLock(cwd: string, skillDir: string, out: string): void {
 function writeSide(seed: string, scratch: string, side: Side, baseLock: string | null): string | null {
   for (const top of [".claude", ".sigildex"]) rmSync(join(seed, top), { recursive: true, force: true });
   writeFileSync(join(seed, "README.md"), "repository\n");
+  if (side.extra !== undefined) writeTree(seed, side.extra);
   const skillDir = side.skillDir ?? SKILL_DIR;
   const approval = side.approval ?? APPROVAL;
   if (side.files !== undefined) writeTree(join(seed, skillDir), side.files);
@@ -171,7 +180,10 @@ interface Scenario {
   runner: string;
   baseSha: string;
   summaryPath: string;
-  npxLog: string;
+  /** Every `npm` command line the snippet issued — the install request. */
+  npmLog: string;
+  /** Every argument list the installed stand-in tool was invoked with. */
+  toolLog: string;
   binDir: string;
 }
 
@@ -201,16 +213,55 @@ function setup(base: Side, head: Side): Scenario {
   git(["push", bare, "pr"], seed);
   git(["clone", "--depth=1", "--branch", "pr", `file://${bare}`, work], root);
 
-  const npxLog = join(root, "npx.log");
-  const quoted = [npxLog, process.execPath, cliPath].map((value) => JSON.stringify(value));
+  const npmLog = join(root, "npm.log");
+  const toolLog = join(root, "tool.log");
+  const templatePath = join(binDir, "sigildex-tool-template");
+  const q = (value: string): string => JSON.stringify(value);
+
+  // The executable a real `npm install sigildex@<version>` would leave behind.
+  // It stands in for the pinned registry build and can be told, per run, to
+  // fail one subcommand so the snippet's exit-status handling is exercised.
   writeFileSync(
-    join(binDir, "npx"),
-    `#!/bin/sh\nprintf '%s\\n' "$*" >> ${quoted[0]}\nshift 2\nexec ${quoted[1]} ${quoted[2]} "$@"\n`,
+    templatePath,
+    [
+      "#!/bin/sh",
+      `printf '%s\\n' "$*" >> ${q(toolLog)}`,
+      'if [ -n "${SIGILDEX_FAULT_SUBCOMMAND:-}" ] && [ "${1:-}" = "$SIGILDEX_FAULT_SUBCOMMAND" ]; then',
+      '  exit "${SIGILDEX_FAULT_STATUS:-1}"',
+      "fi",
+      `exec ${q(process.execPath)} ${q(cliPath)} "$@"`,
+      "",
+    ].join("\n"),
   );
-  chmodSync(join(binDir, "npx"), 0o755);
+  chmodSync(templatePath, 0o755);
+
+  // An `npm` that never reaches a registry: it records the request and installs
+  // the stand-in into whatever prefix the snippet chose (its working directory,
+  // or an explicit --prefix). Nothing here consults the workspace.
+  writeFileSync(
+    join(binDir, "npm"),
+    [
+      "#!/bin/sh",
+      `printf '%s\\n' "$*" >> ${q(npmLog)}`,
+      'prefix="$PWD"',
+      'while [ "$#" -gt 0 ]; do',
+      '  case "$1" in',
+      '    --prefix) prefix="$2"; shift 2 ;;',
+      '    --prefix=*) prefix="${1#--prefix=}"; shift ;;',
+      "    *) shift ;;",
+      "  esac",
+      "done",
+      'mkdir -p "$prefix/node_modules/.bin"',
+      `cp ${q(templatePath)} "$prefix/node_modules/.bin/sigildex"`,
+      'chmod 755 "$prefix/node_modules/.bin/sigildex"',
+      "",
+    ].join("\n"),
+  );
+  chmodSync(join(binDir, "npm"), 0o755);
+
   const summaryPath = join(root, "summary.md");
   writeFileSync(summaryPath, "");
-  return { root, work, runner, baseSha, summaryPath, npxLog, binDir };
+  return { root, work, runner, baseSha, summaryPath, npmLog, toolLog, binDir };
 }
 
 interface Run { code: number; stdout: string; stderr: string }
@@ -242,14 +293,15 @@ function runStep(scenario: Scenario, script: string, overrides: Record<string, s
   }
 }
 
-interface JobResult { materialize: Run; check: Run; summary: string; delta: string }
+interface JobResult { install: Run; materialize: Run; check: Run; summary: string; delta: string }
 
-/** Runs both steps in order, exactly as the job does, and returns the outcome. */
+/** Runs every step in order, exactly as the job does, and returns the outcome. */
 function runJob(scenario: Scenario, overrides: Record<string, string | null> = {}): JobResult {
+  const install = runStep(scenario, INSTALL, overrides);
   const materialize = runStep(scenario, MATERIALIZE, overrides);
   const check = runStep(scenario, CHECK, overrides);
   const summary = readFileSync(scenario.summaryPath, "utf8");
-  return { materialize, check, summary, delta: join(scenario.runner, "delta.json") };
+  return { install, materialize, check, summary, delta: join(scenario.runner, "delta.json") };
 }
 
 function job(base: Side, head: Side, overrides: Record<string, string | null> = {}): JobResult & { scenario: Scenario } {
@@ -295,16 +347,33 @@ function counts(summary: string): Record<string, number> {
 describe("ci snippet harness", () => {
   it("extracts the committed run block rather than a copy", () => {
     expect(CHECK.split("\n").length).toBeGreaterThanOrEqual(50);
-    expect(CHECK).toContain('SIGILDEX="npx --yes sigildex@${SIGILDEX_VERSION}"');
+    expect(CHECK).toContain('SIGILDEX="$RUNNER_TEMP/sigildex-tool/node_modules/.bin/sigildex"');
     expect(MATERIALIZE).toContain('git fetch --no-tags --depth=1 origin "$BASE_SHA"');
+    expect(INSTALL).toContain('npm install --no-save --ignore-scripts --no-audit --no-fund "sigildex@$SIGILDEX_VERSION"');
+  });
+
+  it("resolves the tool outside the workspace, never through the checkout", () => {
+    // Every invocation goes through the absolute $SIGILDEX path. A bare
+    // `sigildex`, or an `npx` from the pull request's working directory, would
+    // let the tree under review supply the program that judges it.
+    expect(CHECK).not.toMatch(/^\s*[^#\n]*\bnpx\b/m);
+    expect(INSTALL).not.toMatch(/^\s*[^#\n]*\bnpx\b/m);
+    const toolCalls = CHECK.split("\n").filter((line) => /^\s*"\$SIGILDEX"\s/.test(line));
+    expect(toolCalls).toHaveLength(3);
+    for (const line of toolCalls) expect(line).toMatch(/^\s*"\$SIGILDEX" (?:check|diff) /);
+    // The install must leave the workspace before it runs, so a committed
+    // .npmrc or package.json cannot steer it.
+    expect(INSTALL).toContain('cd "$TOOL"');
+    expect(INSTALL).toContain('TOOL="$RUNNER_TEMP/sigildex-tool"');
   });
 
   it("uses no bash-4-only construct, so it runs on the macOS system bash 3.2", () => {
     for (const construct of [/\bdeclare\s+-A\b/, /\bmapfile\b/, /\breadarray\b/, /\$\{[A-Za-z_]+\^\^/, /\$\{[A-Za-z_]+,,/, /\|&/, /&>>/]) {
       expect(CHECK, `bash 4+ construct ${construct}`).not.toMatch(construct);
       expect(MATERIALIZE).not.toMatch(construct);
+      expect(INSTALL).not.toMatch(construct);
     }
-    for (const script of [CHECK, MATERIALIZE]) {
+    for (const script of [CHECK, MATERIALIZE, INSTALL]) {
       const path = join(mkdtempSync(join(tmpdir(), "sigildex-syn-")), "s.sh");
       writeFileSync(path, script);
       expect(() => execFileSync(SHELL, ["-n", path], { stdio: "pipe" })).not.toThrow();
@@ -324,7 +393,7 @@ describe("lifecycle matrix", () => {
   it.skipIf(skip)("row: neither exists -> skill + matching lock (new adoption) passes and defers to a human", () => {
     const result = job({}, { files: V1 });
     expectOutcome(result, 0, "Approval is a human decision, not this result.");
-    expect(readFileSync(result.scenario.npxLog, "utf8")).toContain(`--yes sigildex@${SIGILDEX_VERSION}`);
+    expect(readFileSync(result.scenario.npmLog, "utf8")).toContain(`sigildex@${SIGILDEX_VERSION}`);
     // No base tree to diff against, so the summary carries no delta table here.
     expect(existsSync(result.delta)).toBe(false);
     expect(counts(result.summary)).toEqual({});
@@ -383,6 +452,15 @@ describe("lifecycle matrix", () => {
     expectOutcome(result, 1, "The base revision's skill does not match its own approval record.");
     expect(existsSync(result.delta)).toBe(false);
   }, TIMEOUT);
+
+  it.skipIf(skip)("row: an inconsistent base fails even when the pull request removes both sides", () => {
+    // Removal is a success branch, so it must not be reachable before the base
+    // pair has been proved: otherwise the one pull request that erases the
+    // evidence is also the one that never has to explain it.
+    const result = job({ files: V1, lockOf: V2 }, {});
+    expectOutcome(result, 1, "The base revision's skill does not match its own approval record.");
+    expect(result.summary).not.toContain("removed together");
+  }, TIMEOUT);
 });
 
 describe("gate cases", () => {
@@ -398,10 +476,62 @@ describe("gate cases", () => {
     expectOutcome(job({ files: V1 }, { files: V1, lock: "base" }), 0, "Neither the skill nor its approval record changed.");
   }, TIMEOUT);
 
-  it.skipIf(skip)("gate: base lock is schema-invalid -> base check exit 3 -> job exit 1", () => {
+  it.skipIf(skip)("gate: base lock is schema-invalid -> base check exit 3 -> job exit 1 naming an invalid record", () => {
+    // Exit 3 is "this is not a usable approval record", which is a different
+    // repair from exit 2's "the skill drifted". Reporting the base's invalid
+    // record as a mismatch would send the reviewer to re-run lock on a skill
+    // that never changed.
     const edit = (record: Record<string, unknown>): void => { record.schema_version = 99; };
     const result = job({ files: V1, lockEdit: edit }, { files: V1, lock: "base" });
-    expectOutcome(result, 1, "The base revision's skill does not match its own approval record.");
+    expectOutcome(result, 1, "is not a valid approval record for this tool version.");
+    expect(result.summary).not.toContain("does not match its own approval record");
+  }, TIMEOUT);
+
+  it.skipIf(skip)("gate: a failed base-vs-candidate walk is fatal, not a delta", () => {
+    // `diff` exit 1 means a walk failed. Treating it as "differ" would attach a
+    // reviewer-facing delta computed from a tree that was never fully read.
+    const result = job({ files: V1 }, { files: V2 }, { SIGILDEX_FAULT_SUBCOMMAND: "diff", SIGILDEX_FAULT_STATUS: "1" });
+    expectOutcome(result, 1, "Could not compare the base and candidate skill directories");
+    expect(counts(result.summary)).toEqual({});
+  }, TIMEOUT);
+});
+
+describe("tool resolution is not attacker-controlled", () => {
+  /** A `node_modules/sigildex` committed by the pull request whose bin always succeeds. */
+  const SHADOW: Files = {
+    "node_modules/sigildex/package.json":
+      '{"name":"sigildex","version":"0.1.0","bin":{"sigildex":"./index.js"}}\n',
+    "node_modules/sigildex/index.js": "process.exit(0)\n",
+    "node_modules/.bin/sigildex": {
+      content: '#!/bin/sh\nprintf \'ran\\n\' >> "${RUNNER_TEMP:-/tmp}/shadow-ran"\nexit 0\n',
+      exec: true,
+    },
+  };
+
+  it.skipIf(skip)("a pull-request-committed node_modules/sigildex never runs, and never masks drift", () => {
+    // Version-satisfying and correctly shaped: workspace-relative resolution
+    // would prefer it over the registry and every check would pass on a skill
+    // whose bytes no longer match its record.
+    const scenario = setup({ files: V1 }, { files: V2, lock: "base", extra: SHADOW });
+    expect(existsSync(join(scenario.work, "node_modules", ".bin", "sigildex"))).toBe(true);
+
+    const result = runJob(scenario);
+    expect(result.install.code).toBe(0);
+    expectOutcome(result, 1, "Re-review the skill, then re-run sigildex lock.");
+    // The shadow left no trace, and the tool the workflow installed did the work.
+    expect(existsSync(join(scenario.runner, "shadow-ran"))).toBe(false);
+    expect(readFileSync(scenario.toolLog, "utf8").split("\n").filter((line) => line !== "")).toHaveLength(3);
+    // The install went to the workflow's own directory, at the pinned spec.
+    expect(readFileSync(scenario.npmLog, "utf8")).toContain(`sigildex@${SIGILDEX_VERSION}`);
+    expect(existsSync(join(scenario.runner, "sigildex-tool", "node_modules", ".bin", "sigildex"))).toBe(true);
+  }, TIMEOUT);
+
+  it.skipIf(skip)("the check step refuses to run when the tool is not installed where it expects", () => {
+    const scenario = setup({ files: V1 }, { files: V2 });
+    runStep(scenario, MATERIALIZE);
+    const check = runStep(scenario, CHECK);
+    expect(check.code).toBe(1);
+    expect(readFileSync(scenario.summaryPath, "utf8")).toContain("The approval tool is not installed at the expected path.");
   }, TIMEOUT);
 });
 

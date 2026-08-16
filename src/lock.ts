@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { constants } from "node:fs";
 import { open, realpath, rename, unlink } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { compareUtf8 } from "./identity/canonical.js";
 import { readSkillFrontmatter } from "./identity/frontmatter.js";
 import { validateRecordedPath, walkSkill, type WalkFailure, type WalkOptions } from "./identity/walk.js";
 import {
@@ -74,8 +75,73 @@ function orderedDeclaredSource(source: DeclaredSource): DeclaredSource {
   };
 }
 
+const JSON_INDENT = "  ";
+
+export interface JsonDocumentOptions {
+  /**
+   * Keys whose value is data captured from an artifact rather than
+   * schema-controlled structure. Such a value — and everything beneath it — is
+   * written with its object keys in byte-wise sorted order (§12.1). Every other
+   * object keeps its declared key order (§9.1, §12.1).
+   */
+  readonly sortedSubtrees?: ReadonlySet<string>;
+}
+
+/** JSON text for a leaf, or null when the value is not a JSON leaf. */
+function serializeLeaf(value: unknown): string | null {
+  // A size may exceed 2^53 (§9.1), so it is carried as a bigint and written as
+  // exact digits. Converting to a number here would lose the very bytes §8.2
+  // hashes, and the platform serializer refuses bigints outright.
+  if (typeof value === "bigint") return value.toString(10);
+  if (value === null || typeof value === "boolean") return String(value);
+  if (typeof value === "number") return Number.isFinite(value) ? JSON.stringify(value) : "null";
+  if (typeof value === "string") return JSON.stringify(value);
+  return null;
+}
+
+/** JSON text for a value, or null when a member of this type is omitted. */
+function serializeJsonValue(
+  value: unknown,
+  depth: number,
+  sorted: boolean,
+  options: JsonDocumentOptions,
+): string | null {
+  const leaf = serializeLeaf(value);
+  if (leaf !== null) return leaf;
+  if (value === null || typeof value !== "object") return null;
+  const inner = JSON_INDENT.repeat(depth + 1);
+  const closing = JSON_INDENT.repeat(depth);
+  if (Array.isArray(value)) {
+    if (value.length === 0) return "[]";
+    const items = value.map((item) => `${inner}${serializeJsonValue(item, depth + 1, sorted, options) ?? "null"}`);
+    return `[\n${items.join(",\n")}\n${closing}]`;
+  }
+  const keys = Object.keys(value);
+  if (sorted) keys.sort(compareUtf8);
+  const members: string[] = [];
+  for (const key of keys) {
+    const nested = sorted || options.sortedSubtrees?.has(key) === true;
+    const member = serializeJsonValue((value as Record<string, unknown>)[key], depth + 1, nested, options);
+    if (member !== null) members.push(`${inner}${JSON.stringify(key)}: ${member}`);
+  }
+  return members.length === 0 ? "{}" : `{\n${members.join(",\n")}\n${closing}}`;
+}
+
+/**
+ * Deterministic JSON text with 2-space indentation and LF separators, matching
+ * the platform serializer byte for byte on every value it accepts. It exists
+ * because two of our values fall outside what that serializer can express:
+ * a bigint file size (which it throws on, turning a drift verdict into a tool
+ * error) and an ordering requirement that object key insertion order cannot
+ * carry, since integer-like keys are enumerated first whatever the order they
+ * were added in. No trailing newline is added.
+ */
+export function serializeJsonDocument(value: unknown, options: JsonDocumentOptions = {}): string {
+  return serializeJsonValue(value, 0, false, options) ?? "null";
+}
+
 export function serializeApprovalRecord(record: ApprovalRecord): string {
-  return `${JSON.stringify(record, null, 2)}\n`;
+  return `${serializeJsonDocument(record)}\n`;
 }
 
 async function atomicWrite(outputPath: string, contents: string): Promise<void> {
