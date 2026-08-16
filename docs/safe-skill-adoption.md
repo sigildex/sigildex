@@ -474,7 +474,7 @@ carries both trees' frontmatter under `base.skill.frontmatter` and
 `candidate.skill.frontmatter`, and the approval record printed by `lock` and by
 a matching `check` carries the artifact's frontmatter under `skill.frontmatter`,
 in each case verbatim and untruncated. Only the drift report from a mismatching
-`check` is frontmatter-free: it carries paths, classes, sizes, and digests.
+`check` is frontmatter-free: it carries paths, classes, sizes, digests, and executable bits.
 
 That matters when the JSON is going somewhere that treats text as instructions —
 an agent's context, an LLM-summarized review comment. `--json` is a stable
@@ -484,7 +484,8 @@ structure, not a sanitized one. Reduce it first:
 sigildex diff BASE CAND --json | jq 'walk(if type == "object" then del(.frontmatter) else . end)'
 ```
 
-What survives is every count, path, class, size, and digest, plus
+What survives is every count, path, class, size, digest, executable bit, and
+change flag (`content_changed`, `mode_changed`), plus
 `frontmatter_status` — the tool's own verdict on whether the frontmatter parsed,
 which is not candidate text. This **reduces exposure; it is not a security
 boundary**, and it says nothing about the file contents themselves. A shell
