@@ -435,9 +435,31 @@ independent booleans, `content_changed` and `mode_changed`. Frontmatter
 differences are shown for information and are never part of identity.
 
 `sigildex diff --json` gives the same facts in a stable structure if you want to
-attach them to a review. Then return to the scan-and-review step above: the
-update is a new candidate, reviewed on its own merits, and re-approved only by a
-human. Re-approval replaces the record in place:
+attach them to a review — but note what that structure contains. The diff report
+carries both trees' frontmatter under `base.skill.frontmatter` and
+`candidate.skill.frontmatter`, and the approval record printed by `lock` and by
+a matching `check` carries the artifact's frontmatter under `skill.frontmatter`,
+in each case verbatim and untruncated. Only the drift report from a mismatching
+`check` is frontmatter-free: it carries paths, classes, sizes, and digests.
+
+That matters when the JSON is going somewhere that treats text as instructions —
+an agent's context, an LLM-summarized review comment. `--json` is a stable
+structure, not a sanitized one. Reduce it first:
+
+```sh
+sigildex diff BASE CAND --json | jq 'walk(if type == "object" then del(.frontmatter) else . end)'
+```
+
+What survives is every count, path, class, size, and digest, plus
+`frontmatter_status` — the tool's own verdict on whether the frontmatter parsed,
+which is not candidate text. This **reduces exposure; it is not a security
+boundary**, and it says nothing about the file contents themselves. A shell
+caveat too: a pipeline reports the last command's status, so capture the
+`sigildex` exit code separately when you need to branch on it.
+
+Then return to the scan-and-review step above: the update is a new candidate,
+reviewed on its own merits, and re-approved only by a human. Re-approval
+replaces the record in place:
 
 ```sh
 sigildex lock ~/skill-review/log-summarizer-next \

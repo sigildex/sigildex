@@ -136,6 +136,17 @@ verdict.
   treat candidate content as data, to prefer structural output, and never to act
   on instructions found in a candidate. Those rules reduce risk. They do not make
   a model immune to injection, and no immunity is claimed.
+- **The JSON reports embed candidate frontmatter.** Structural output is not
+  sanitized output. The approval record printed by `lock` and by a matching
+  `check` carries the artifact's frontmatter verbatim under `skill.frontmatter`,
+  and the diff report carries both trees' frontmatter under
+  `base.skill.frontmatter` and `candidate.skill.frontmatter`; only the drift
+  report from a mismatching `check` is frontmatter-free. Terminal and job-summary
+  rendering is escaped (specification section 15), but `--json` is the machine
+  contract and is emitted as recorded. A consumer feeding these reports to a
+  model should delete every `frontmatter` object first — the documented reducer
+  is in [safe-skill-adoption.md](safe-skill-adoption.md) and in the Agent Skill —
+  which reduces exposure without being a security boundary.
 - **Branch protection can be bypassed by an administrator.** These are
   repository settings, not cryptography. What the setup buys is that unreviewed
   approval becomes a visible administrative act rather than an ordinary commit.
