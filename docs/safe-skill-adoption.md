@@ -300,21 +300,44 @@ copy-paste GitHub Actions workflow and its full rationale are in
 [ci/README.md](ci/README.md) and [ci/approval-check.yml](ci/approval-check.yml).
 
 In short, for the **one** skill/record pair it is configured with, the gate
-proves three things: the base revision's skill matches its own approval record
-(so you never compare against an already-broken reference), the pull request's
-skill matches the pull request's record, and the two move together — changing
-one without the other fails. It looks at no other entry in the approvals
-directory, and nothing Sigildex ships audits that directory for duplicate
-approval ids, duplicate artifact paths, or orphaned records.
+proves two things: the base revision's skill matches its own approval record (so
+you never compare against an already-broken reference), and the pull request's
+skill matches the pull request's record. It looks at no other entry in the
+approvals directory, and nothing Sigildex ships audits that directory for
+duplicate approval ids, duplicate artifact paths, or orphaned records.
 
-It cannot prove the change *should* be approved. A pull request that rewrites a
-skill and regenerates its record in the same commit is mechanically consistent.
-Making regeneration require a human is a repository-settings job: put
-`/.sigildex/approvals/**` under `CODEOWNERS`, require code-owner review, dismiss
-stale approvals on new commits, and require the check. Those are settings, not
-cryptography — anyone who can change branch protection can bypass them. What the
-setup buys you is that unreviewed approval becomes a visible administrative act
-rather than an ordinary commit.
+Be precise about what "the skill and its record move together" does and does not
+mean, because the workflow does not treat every one-sided change alike:
+
+| Pull request does this | Result |
+|---|---|
+| Adds a skill and a matching record | pass |
+| Changes both consistently | pass |
+| Changes the skill, leaves the record | **fail** |
+| Changes the record, leaves the skill mismatched | **fail** |
+| Changes only the record's metadata | pass, flagged in the summary for human approval |
+| Removes both | pass |
+| Removes only one of them | **fail** |
+| Touches neither | pass |
+| Starts from a base whose skill and record already disagree | **fail**, whatever else the pull request does — removal included |
+| Starts from a base whose approval record is not a valid record | **fail**, reported as an invalid record rather than as drift |
+
+So an identity mismatch fails, and so does partial presence — a skill with no
+record, a record with no skill, one removed without the other. But a
+structurally valid change to the record *alone* passes when the skill still
+matches it, and is flagged in the job summary for a human to approve. Editing
+`declared_source` or other record metadata is therefore not mechanically
+blocked: those fields sit outside the identity digest, so changing them is never
+drift. What controls them is `CODEOWNERS` and branch settings, not the check.
+
+The gate also cannot prove the change *should* be approved. A pull request that
+rewrites a skill and regenerates its record in the same commit is mechanically
+consistent. Making regeneration require a human is a repository-settings job:
+put `/.sigildex/approvals/**` under `CODEOWNERS`, require code-owner review,
+dismiss stale approvals on new commits, and require the check. Those are
+settings, not cryptography — anyone who can change branch protection can bypass
+them. What the setup buys you is that unreviewed approval becomes a visible
+administrative act rather than an ordinary commit.
 
 ## Checking approved skills for updates
 

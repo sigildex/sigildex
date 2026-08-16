@@ -27,8 +27,10 @@ Sigildex implements one stage of a longer workflow and documents the rest.
    schedule.
 7. **Stage the candidate update** in quarantine. Detection and staging never
    modify the active installation.
-8. **Diff and re-approve** — `sigildex diff` explains what changed, a human
-   approves a new baseline, and CI enforces it.
+8. **Diff and re-approve** — `sigildex diff` explains what changed and a human
+   approves a new baseline. A CI check proves the skill and its record still
+   agree; code owners, required review, dismissal of stale approvals, and branch
+   protection are what hold the human decision in place.
 
 The full guide, including adopting already-installed skills, removal and
 emergency revocation, and the explicit limits of what an approval record cannot
@@ -68,11 +70,15 @@ npx sigildex lock skill-v1 \
   --source-tracking track-default-branch
 ```
 
-The `--out` filename is always `<approval-id>.lock.json` — the tool refuses any
-other name, so a record and its id can never disagree. The `--source-*` flags
-are optional; they record where you believe the artifact came from, so a later
-update check knows where to look. They are never verified, and they sit outside
-the identity digest.
+The `--out` filename is always `<approval-id>.lock.json` — `lock` refuses to
+write under any other name, so a record it writes can never disagree with its
+own id. `check` does not re-check that: it reads whatever record `--against`
+points at, under whatever path, and compares the artifact to it as-is. The
+invariant is enforced where records are *written*, not where they are *used*, so
+keeping the store's naming honest is a review responsibility. The `--source-*`
+flags are optional; they record where you believe the artifact came from, so a
+later update check knows where to look. They are never verified, and they sit
+outside the identity digest.
 
 ```
 Locked skill-v1

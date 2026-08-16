@@ -375,8 +375,18 @@ Read-only. Never modifies an active skill.
 Point the human at the repository's `docs/ci/` — a copy-paste GitHub Actions
 workflow plus its rationale. Summarize honestly:
 
-- It proves the base revision is self-consistent, the pull request's skill
-  matches the pull request's record, and the two move together.
+- It proves the base revision is self-consistent and that the pull request's
+  skill matches the pull request's record, for the one pair it is configured
+  with.
+- An identity mismatch fails, and so does partial presence — a skill with no
+  record, a record with no skill, one removed without the other. A structurally
+  valid change to the record *alone* **passes** when the skill still matches,
+  flagged in the job summary for human approval. Do not tell a human that edits
+  to `declared_source` or other record metadata are mechanically blocked; they
+  sit outside the identity digest and are governed by `CODEOWNERS`.
+- A pull request that adds a new skill directory with no approval record touches
+  nothing the workflow watches, so it passes — and draws no code-owner review
+  unless the skills directory is in `CODEOWNERS` too.
 - It cannot prove the change *should* be approved. A pull request that rewrites
   a skill and regenerates its record in the same commit passes.
 - Making regeneration require a human is repository settings: `CODEOWNERS` over

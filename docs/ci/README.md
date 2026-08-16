@@ -56,6 +56,13 @@ Result table, for the states the workflow distinguishes:
   a judgement. A pull request that rewrites a skill and regenerates its record in
   the same commit passes this workflow. Only a human reading the change can
   decide it is acceptable — see the governance section below.
+- **That a skill was added at all.** A pull request that adds a *new* skill
+  directory with no approval record touches neither `SKILL_DIR` nor `APPROVAL`,
+  so the workflow reaches its no-op outcome and passes — and it triggers no
+  code-owner review either, unless the consumer also puts its skills directory
+  under CODEOWNERS. Cover the directory your agent actually loads, for example
+  `.claude/skills/** @your-org/skill-approvers`, so an unapproved skill cannot
+  arrive unreviewed through a path nothing watches.
 - **That the skill is safe.** Sigildex does no scanning, no scoring, and no
   provenance verification. A record's `declared_source`, if present, is
   user-supplied and unverified.
@@ -168,6 +175,6 @@ untrusted by definition:
 
 ## Seeing it end to end
 
-[`examples/version-drift`](../../examples/version-drift) walks the same
-lifecycle locally — adoption, verification, drift, review, re-approval, removal
+[`examples/version-drift`](https://github.com/sigildex/sigildex/tree/main/examples/version-drift)
+walks the same lifecycle locally — adoption, verification, drift, review, re-approval, removal
 — with the exit code for each step.
