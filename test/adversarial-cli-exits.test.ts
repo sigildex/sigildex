@@ -63,7 +63,7 @@ describe("§3.3 / §12 row 9: lock --out refusals never write a lock", () => {
     const { temp, root } = await project();
     await mkdir(join(temp, "other"), { recursive: true });
     const before = await entries(root);
-    const result = await run(["lock", "skill", "--out", "other/../skill/x.lock.json"], temp);
+    const result = await run(["lock", "skill", "--out", "other/../skill/skill.lock.json"], temp);
     expect(result.code).toBe(1);
     expect(result.stderr).toContain("beneath the skill root");
     expect(result.stdout).toBe("");
@@ -73,9 +73,9 @@ describe("§3.3 / §12 row 9: lock --out refusals never write a lock", () => {
   it("row 9: an --out that is a symlink into the tree writes through the link, never into the tree", async () => {
     const { temp, root } = await project();
     await writeFile(join(root, "inside.lock.json"), "{}\n");
-    await symlink(join(root, "inside.lock.json"), join(temp, "alias.lock.json"));
+    await symlink(join(root, "inside.lock.json"), join(temp, "skill.lock.json"));
     const before = await entries(root);
-    const result = await run(["lock", "skill", "--out", "alias.lock.json"], temp);
+    const result = await run(["lock", "skill", "--out", "skill.lock.json"], temp);
     // §3.3 forbids a *resolved* output path inside the root, which reads two ways
     // for a final-component symlink: the implementation resolves the containing
     // directory but not the file about to be created. Either way the property
@@ -85,7 +85,7 @@ describe("§3.3 / §12 row 9: lock --out refusals never write a lock", () => {
     await expectNothingWritten(root, before);
     expect(await readFile(join(root, "inside.lock.json"), "utf8"), "link target untouched").toBe("{}\n");
     if (result.code === 0) {
-      expect(validateApprovalRecord(await readFile(join(temp, "alias.lock.json"))).ok).toBe(true);
+      expect(validateApprovalRecord(await readFile(join(temp, "skill.lock.json"))).ok).toBe(true);
     }
   });
 
@@ -94,7 +94,7 @@ describe("§3.3 / §12 row 9: lock --out refusals never write a lock", () => {
     await mkdir(join(root, "sub"), { recursive: true });
     await symlink(join(root, "sub"), join(temp, "aliasdir"));
     const before = await entries(join(root, "sub"));
-    const result = await run(["lock", "skill", "--out", "aliasdir/x.lock.json"], temp);
+    const result = await run(["lock", "skill", "--out", "aliasdir/skill.lock.json"], temp);
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
     await expectNothingWritten(join(root, "sub"), before);
@@ -110,7 +110,7 @@ describe("§3.3 / §12 row 9: lock --out refusals never write a lock", () => {
     // `alias/skill` and `real/skill` are the same directory: the guard must compare
     // resolved paths, not textual ones (this is the shape `/tmp` takes on macOS).
     const result = await run(
-      ["lock", "alias/skill", "--out", "alias/skill/self.lock.json", "--artifact-path", "skill"],
+      ["lock", "alias/skill", "--out", "alias/skill/skill.lock.json", "--artifact-path", "skill"],
       temp,
     );
     expect(result.code).toBe(1);
@@ -120,19 +120,21 @@ describe("§3.3 / §12 row 9: lock --out refusals never write a lock", () => {
 
   it("§12: --out pointing at an existing directory fails without a partial write", async () => {
     const { temp } = await project();
-    await mkdir(join(temp, "existing"), { recursive: true });
+    // Named for the approval id, so the §9.3 filename rule passes and the write
+    // itself is what fails.
+    await mkdir(join(temp, "skill.lock.json"), { recursive: true });
     const before = await entries(temp);
-    const result = await run(["lock", "skill", "--out", "existing"], temp);
+    const result = await run(["lock", "skill", "--out", "skill.lock.json"], temp);
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
-    expect(await entries(join(temp, "existing"))).toEqual([]);
+    expect(await entries(join(temp, "skill.lock.json"))).toEqual([]);
     await expectNothingWritten(temp, before);
   });
 
   it("§12: --out in a nonexistent directory fails without creating anything", async () => {
     const { temp } = await project();
     const before = await entries(temp);
-    const result = await run(["lock", "skill", "--out", "absent/x.lock.json"], temp);
+    const result = await run(["lock", "skill", "--out", "absent/skill.lock.json"], temp);
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
     await expectNothingWritten(temp, before);
@@ -144,7 +146,7 @@ describe("§3.3 / §12 row 9: lock --out refusals never write a lock", () => {
     await mkdir(readOnly, { recursive: true });
     await chmod(readOnly, 0o555);
     try {
-      const result = await run(["lock", "skill", "--out", "readonly/x.lock.json"], temp);
+      const result = await run(["lock", "skill", "--out", "readonly/skill.lock.json"], temp);
       expect(result.code).toBe(1);
       expect(result.stdout).toBe("");
       expect(await entries(readOnly)).toEqual([]);
@@ -157,7 +159,7 @@ describe("§3.3 / §12 row 9: lock --out refusals never write a lock", () => {
 describe("§12 rows 1, 11a, 11b: check acquires, validates, then walks", () => {
   async function locked(): Promise<{ temp: string; root: string }> {
     const created = await project();
-    expect((await run(["lock", "skill", "--out", "approval.lock.json"], created.temp)).code).toBe(0);
+    expect((await run(["lock", "skill", "--out", "skill.lock.json"], created.temp)).code).toBe(0);
     return created;
   }
 
@@ -203,7 +205,8 @@ describe("§12 rows 1, 11a, 11b: check acquires, validates, then walks", () => {
 
   it("row 1: a skill root that is a regular file fails with exit 1", async () => {
     const { temp } = await locked();
-    const result = await run(["check", "approval.lock.json", "--against", "approval.lock.json"], temp);
+    await writeFile(join(temp, "regular-file"), "not a skill directory\n");
+    const result = await run(["check", "regular-file", "--against", "skill.lock.json"], temp);
     expect(result.code).toBe(1);
     expect(result.stderr).toContain("not a directory");
     expect(result.stdout).toBe("");
@@ -217,7 +220,7 @@ describe("§12 rows 1, 11a, 11b: check acquires, validates, then walks", () => {
     expect(both.stderr).toContain("Cannot acquire lock");
     expect(both.stderr).not.toContain("skill root");
     // Valid lock, missing artifact: the walk error surfaces only after acquisition.
-    const walkFailure = await run(["check", "absent-skill", "--against", "approval.lock.json"], temp);
+    const walkFailure = await run(["check", "absent-skill", "--against", "skill.lock.json"], temp);
     expect(walkFailure.code).toBe(1);
     expect(walkFailure.stderr).toContain("skill root");
   });
@@ -270,8 +273,8 @@ describe("§12/§15: error reporting is consistent across commands and flags", (
   it("§12: --json never turns an error path into stdout output or a different exit code", async () => {
     const { temp } = await project();
     const failures: readonly string[][] = [
-      ["lock", "absent-skill", "--out", "a.lock.json"],
-      ["lock", "skill", "--out", "skill/self.lock.json"],
+      ["lock", "absent-skill", "--out", "absent-skill.lock.json"],
+      ["lock", "skill", "--out", "skill/skill.lock.json"],
       ["check", "skill", "--against", "absent.lock.json"],
       ["diff", "skill", "absent"],
     ];
@@ -297,14 +300,14 @@ describe("§12/§15: error reporting is consistent across commands and flags", (
   it("§12: unknown flags, empty values, and stray positionals are input errors, exit 1", async () => {
     const { temp } = await project();
     const rejected: readonly string[][] = [
-      ["lock", "skill", "--out", "a.lock.json", "--force"],
+      ["lock", "skill", "--out", "skill.lock.json", "--force"],
       ["lock", "skill", "--out"],
       ["lock", "skill", "--out="],
       ["lock", "skill"],
-      ["lock", "--out", "a.lock.json"],
-      ["lock", "skill", "extra", "--out", "a.lock.json"],
-      ["lock", "-weird", "--out", "a.lock.json"],
-      ["lock", "--", "skill", "--out", "a.lock.json"],
+      ["lock", "--out", "skill.lock.json"],
+      ["lock", "skill", "extra", "--out", "skill.lock.json"],
+      ["lock", "-weird", "--out", "skill.lock.json"],
+      ["lock", "--", "skill", "--out", "skill.lock.json"],
       ["check", "skill", "--against", "a.lock.json", "--verbose"],
       ["diff", "skill", "skill", "--depth", "2"],
       ["verify", "skill"],
@@ -320,22 +323,27 @@ describe("§12/§15: error reporting is consistent across commands and flags", (
 
   it("§12: a repeated flag takes its last value and still writes exactly one lock", async () => {
     const { temp } = await project();
-    const result = await run(["lock", "skill", "--out", "first.lock.json", "--out", "second.lock.json", "--json", "--json"], temp);
+    // §9.3 fixes the filename, so the two candidate destinations differ by directory.
+    await mkdir(join(temp, "first"), { recursive: true });
+    await mkdir(join(temp, "second"), { recursive: true });
+    const result = await run(
+      ["lock", "skill", "--out", "first/skill.lock.json", "--out", "second/skill.lock.json", "--json", "--json"],
+      temp,
+    );
     expect(result.code).toBe(0);
     // Observation, not a spec rule: node:util parseArgs keeps the last value of a
     // repeated string option, so only the second path is written.
-    const written = await entries(temp);
-    expect(written).toContain("second.lock.json");
-    expect(written).not.toContain("first.lock.json");
-    expect(validateApprovalRecord(await readFile(join(temp, "second.lock.json"))).ok).toBe(true);
+    expect(await entries(join(temp, "second"))).toEqual(["skill.lock.json"]);
+    expect(await entries(join(temp, "first"))).toEqual([]);
+    expect(validateApprovalRecord(await readFile(join(temp, "second", "skill.lock.json"))).ok).toBe(true);
   });
 
   it("§8.4: two consecutive --json runs print byte-identical stdout", async () => {
     const { temp, root } = await project();
-    expect((await run(["lock", "skill", "--out", "approval.lock.json"], temp)).code).toBe(0);
+    expect((await run(["lock", "skill", "--out", "skill.lock.json"], temp)).code).toBe(0);
     await writeFile(join(root, "notes.txt"), "drifted\n");
-    const checkOne = await run(["check", "skill", "--against", "approval.lock.json", "--json"], temp);
-    const checkTwo = await run(["check", "skill", "--against", "approval.lock.json", "--json"], temp);
+    const checkOne = await run(["check", "skill", "--against", "skill.lock.json", "--json"], temp);
+    const checkTwo = await run(["check", "skill", "--against", "skill.lock.json", "--json"], temp);
     expect(checkOne.code).toBe(2);
     expect(checkOne.stdout).toBe(checkTwo.stdout);
     const diffOne = await run(["diff", "skill", "skill", "--json"], temp);
@@ -359,7 +367,7 @@ describe("§12: a stdout consumer that closes early cannot manufacture a false s
       ),
     );
     const outcome = await new Promise<{ code: number | null; signal: string | null; received: number }>((resolvePromise) => {
-      const child = spawn(process.execPath, [cliPath, "lock", "skill", "--out", "epipe.lock.json", "--json"], { cwd: temp });
+      const child = spawn(process.execPath, [cliPath, "lock", "skill", "--out", "skill.lock.json", "--json"], { cwd: temp });
       let received = 0;
       child.stdout.once("data", (chunk: Buffer) => {
         received += chunk.length;
@@ -369,7 +377,7 @@ describe("§12: a stdout consumer that closes early cannot manufacture a false s
       child.on("close", (code, signal) => resolvePromise({ code, signal, received }));
     });
 
-    const bytes = await readFile(join(temp, "epipe.lock.json"));
+    const bytes = await readFile(join(temp, "skill.lock.json"));
     const validation = validateApprovalRecord(bytes);
     expect(validation.ok, "the lock is written and fsynced before stdout is touched").toBe(true);
     if (validation.ok) expect(validation.record.files.length).toBe(3002);

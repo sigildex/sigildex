@@ -216,8 +216,12 @@ describe("§9.2 lock serialization stability", () => {
   it("§9.2: locking one tree twice differs only in created_at", async () => {
     const { root, temp } = await fixture();
     await writeSkill(root);
-    const first = await lock({ skillRoot: root, outputPath: join(temp, "one.json"), approvalId: "a", artifactPath: "skill", createdAt: "2026-08-14T00:00:00Z" });
-    const second = await lock({ skillRoot: root, outputPath: join(temp, "two.json"), approvalId: "a", artifactPath: "skill", createdAt: "2026-08-15T23:59:59.999999999Z" });
+    // Both locks carry the same approval id, so §9.3 fixes their filename; the
+    // two runs are separated by directory instead.
+    await mkdir(join(temp, "one"));
+    await mkdir(join(temp, "two"));
+    const first = await lock({ skillRoot: root, outputPath: join(temp, "one", "a.lock.json"), approvalId: "a", artifactPath: "skill", createdAt: "2026-08-14T00:00:00Z" });
+    const second = await lock({ skillRoot: root, outputPath: join(temp, "two", "a.lock.json"), approvalId: "a", artifactPath: "skill", createdAt: "2026-08-15T23:59:59.999999999Z" });
     expect(first.kind).toBe("locked");
     expect(second.kind).toBe("locked");
     if (first.kind !== "locked" || second.kind !== "locked") return;
@@ -232,7 +236,7 @@ describe("§9.2 lock serialization stability", () => {
       join(root, "SKILL.md"),
       '---\nname: "démo 😀 𝄞"\ndescription: "ünïcode ✓"\n---\nBody\n',
     );
-    const result = await lock({ skillRoot: root, outputPath: join(temp, "u.json"), approvalId: "a", artifactPath: "skill", createdAt: "2026-08-14T00:00:00Z" });
+    const result = await lock({ skillRoot: root, outputPath: join(temp, "a.lock.json"), approvalId: "a", artifactPath: "skill", createdAt: "2026-08-14T00:00:00Z" });
     expect(result.kind).toBe("locked");
     if (result.kind !== "locked") return;
     const json = result.json;
@@ -283,7 +287,7 @@ describe("§8.4/§12 report determinism", () => {
     const { root: locked, lockPath } = await fixture("locked");
     await writeSkill(locked);
     await writeFile(join(locked, "notes.txt"), "one\n");
-    expect((await lock({ skillRoot: locked, outputPath: lockPath, approvalId: "a", artifactPath: "skill" })).kind).toBe("locked");
+    expect((await lock({ skillRoot: locked, outputPath: lockPath, approvalId: "approval", artifactPath: "skill" })).kind).toBe("locked");
     await writeFile(join(locked, "notes.txt"), "two\n");
     await writeFile(join(locked, "added.txt"), "new\n");
     const checkOne = await check({ skillRoot: locked, lockPath });

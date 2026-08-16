@@ -15,6 +15,10 @@ export const TOOL_VERSION = "0.1.0";
 
 export interface LockOptions {
   skillRoot: string;
+  /**
+   * Where the record is written. It must sit outside the skill root (§3.3), and its
+   * filename must be `<approvalId>.lock.json` (§9.3) — both are checked before the walk.
+   */
   outputPath: string;
   approvalId: string;
   artifactPath: string;
@@ -91,6 +95,34 @@ async function atomicWrite(outputPath: string, contents: string): Promise<void> 
   }
 }
 
+/**
+ * Every precondition decidable without reading the tree, checked in this order so a
+ * rejected lock never walks and never writes: the output must not land inside the tree
+ * (§3.3), the approval id must be well formed, the output filename must be the one that
+ * id implies (§9.3), and the remaining recorded fields must satisfy their grammars.
+ * Returns the failure message, or null when the lock may proceed.
+ */
+function preWalkFailure(
+  options: LockOptions,
+  resolvedRoot: string,
+  outputPath: string,
+  toolVersion: string,
+  createdAt: string,
+): string | null {
+  if (inside(resolvedRoot, outputPath)) return "Lock output path is equal to or beneath the skill root";
+  if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(options.approvalId)) return "approvalId has an invalid grammar";
+  const expectedFilename = `${options.approvalId}.lock.json`;
+  if (basename(outputPath) !== expectedFilename) {
+    return `Lock output filename must be <approval_id>.lock.json (expected "${expectedFilename}").`;
+  }
+  if (validateRecordedPath(options.artifactPath, true) !== null) {
+    return "artifactPath is not a valid project-relative POSIX path";
+  }
+  if (!/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/.test(toolVersion)) return "toolVersion has an invalid grammar";
+  if (!isRealUtcInstant(createdAt)) return "createdAt is not a real RFC 3339 UTC instant";
+  return null;
+}
+
 export async function lock(options: LockOptions): Promise<LockResult> {
   try {
     let resolvedRoot: string;
@@ -100,23 +132,10 @@ export async function lock(options: LockOptions): Promise<LockResult> {
       return { kind: "tool_error", message: `Cannot resolve skill root: ${errorText(error)}` };
     }
     const outputPath = await resolveOutputPath(options.outputPath);
-    if (inside(resolvedRoot, outputPath)) {
-      return { kind: "tool_error", message: "Lock output path is equal to or beneath the skill root" };
-    }
-    if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(options.approvalId)) {
-      return { kind: "tool_error", message: "approvalId has an invalid grammar" };
-    }
-    if (validateRecordedPath(options.artifactPath, true) !== null) {
-      return { kind: "tool_error", message: "artifactPath is not a valid project-relative POSIX path" };
-    }
     const toolVersion = options.toolVersion ?? TOOL_VERSION;
-    if (!/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/.test(toolVersion)) {
-      return { kind: "tool_error", message: "toolVersion has an invalid grammar" };
-    }
     const createdAt = options.createdAt ?? new Date().toISOString();
-    if (!isRealUtcInstant(createdAt)) {
-      return { kind: "tool_error", message: "createdAt is not a real RFC 3339 UTC instant" };
-    }
+    const rejected = preWalkFailure(options, resolvedRoot, outputPath, toolVersion, createdAt);
+    if (rejected !== null) return { kind: "tool_error", message: rejected };
 
     const walked = await walkSkill(resolvedRoot, options.walkOptions);
     if (!walked.ok) return { kind: "tool_error", message: walked.message, failure: walked };

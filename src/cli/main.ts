@@ -5,8 +5,9 @@ import { check } from "../check.js";
 import { diff } from "../diff/diff.js";
 import { validateRecordedPath } from "../identity/walk.js";
 import { lock, TOOL_VERSION } from "../lock.js";
+import { DECLARED_SOURCE_FIELDS, validateDeclaredSource, type DeclaredSource } from "../schema/validate.js";
 import { renderDiffReport, renderDriftReport, renderLockSummary, renderMatch } from "./render.js";
-import { sanitizeForTerminal } from "./sanitize.js";
+import { displayString, sanitizeForTerminal } from "./sanitize.js";
 
 const EXIT_OK = 0;
 const EXIT_TOOL_ERROR = 1;
@@ -19,7 +20,9 @@ const TOOL_VERSION_GRAMMAR = /^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/;
 const USAGE = `sigildex — record what you approved, detect when it changes.
 
 Usage:
-  sigildex lock <skill-path> --out <lock-path> [--approval-id <id>] [--artifact-path <path>] [--json]
+  sigildex lock <skill-path> --out <lock-path> [--approval-id <id>] [--artifact-path <path>]
+                             [--source-kind <kind>] [--source-repository <url>] [--source-path <path>]
+                             [--source-commit <hex>] [--source-tracking <policy>] [--json]
   sigildex check <skill-path> --against <lock-path> [--json]
   sigildex diff <base-path> <candidate-path> [--json]
   sigildex --help
@@ -32,7 +35,8 @@ Commands:
 
 Options:
   --out <path>            Where to write the approval record (required by lock).
-                          It must not be inside the skill directory.
+                          It must not be inside the skill directory, and its
+                          filename must be <approval-id>.lock.json.
   --approval-id <id>      Stable record id, matching [a-z0-9][a-z0-9-]{0,63}.
                           Defaults to the skill directory name.
   --artifact-path <path>  Project-relative POSIX path recorded in the record.
@@ -40,6 +44,18 @@ Options:
   --against <path>        Approval record to check the skill directory against.
   --json                  Print the machine-readable record or report instead of
                           the human-readable summary.
+
+Declared source (lock only, all optional, all recorded unverified):
+  --source-kind <kind>        Source kind, 1-32 characters from [a-z0-9-].
+  --source-repository <url>   Where the artifact came from, at most 512 bytes.
+  --source-path <path>        Path within that source, or "." for its root.
+  --source-commit <hex>       Approved revision, 7-64 lowercase hex characters.
+  --source-tracking <policy>  How updates are tracked, at most 128 bytes.
+
+Passing any --source-* flag records a declared_source; passing none omits it.
+Its contents are user-supplied and never verified: they say where you believe
+the artifact came from, not where it provably came from, and they sit outside
+the root digest, so editing them is not drift.
 
 Exit codes:
   0  success, match, or identical
@@ -102,6 +118,57 @@ function wantsHelp(args: readonly string[]): boolean {
   return args.includes("--help") || args.includes("-h");
 }
 
+/** The `--source-*` flags, paired with the `declared_source` member each one sets. */
+const SOURCE_FLAGS = [
+  ["source-kind", "kind"],
+  ["source-repository", "repository"],
+  ["source-path", "path"],
+  ["source-commit", "approved_commit"],
+  ["source-tracking", "tracking_policy"],
+] as const;
+
+const LOCK_OPTIONS = {
+  out: { type: "string" },
+  "approval-id": { type: "string" },
+  "artifact-path": { type: "string" },
+  "source-kind": { type: "string" },
+  "source-repository": { type: "string" },
+  "source-path": { type: "string" },
+  "source-commit": { type: "string" },
+  "source-tracking": { type: "string" },
+  json: { type: "boolean", default: false },
+} as const;
+
+type DeclaredSourceResult =
+  | { kind: "absent" }
+  | { kind: "present"; declaredSource: DeclaredSource }
+  | { kind: "error"; message: string };
+
+/**
+ * Builds `declared_source` from the `--source-*` flags. Every member is optional, so any
+ * subset is a valid combination; giving none omits the field entirely. Values are checked
+ * against the record grammars themselves, so a lock is never attempted with a source the
+ * schema would reject.
+ */
+function declaredSourceFromFlags(values: Record<string, unknown>): DeclaredSourceResult {
+  const source: Record<string, string> = {};
+  for (const [flag, field] of SOURCE_FLAGS) {
+    const value = values[flag];
+    if (value === undefined) continue;
+    const { rule, accepts } = DECLARED_SOURCE_FIELDS[field];
+    if (typeof value !== "string" || !accepts(value)) {
+      return { kind: "error", message: `--${flag} must be ${rule} (got "${displayString(String(value))}").` };
+    }
+    source[field] = value;
+  }
+  if (Object.keys(source).length === 0) return { kind: "absent" };
+  const declaredSource = validateDeclaredSource({ ...source, verification: "user_supplied" });
+  if (declaredSource === null) {
+    return { kind: "error", message: "The --source-* values do not form a valid declared source." };
+  }
+  return { kind: "present", declaredSource };
+}
+
 async function runLock(args: readonly string[]): Promise<number> {
   if (wantsHelp(args)) {
     write(process.stdout, USAGE);
@@ -109,12 +176,7 @@ async function runLock(args: readonly string[]): Promise<number> {
   }
   const { values, positionals } = parseArgs({
     args: [...args],
-    options: {
-      out: { type: "string" },
-      "approval-id": { type: "string" },
-      "artifact-path": { type: "string" },
-      json: { type: "boolean", default: false },
-    },
+    options: LOCK_OPTIONS,
     allowPositionals: true,
     strict: true,
   });
@@ -137,12 +199,15 @@ async function runLock(args: readonly string[]): Promise<number> {
         "Pass --artifact-path <project-relative-path> to record its project-relative location.",
     );
   }
+  const source = declaredSourceFromFlags(values);
+  if (source.kind === "error") return failWith(source.message);
   const result = await lock({
     skillRoot: skillPath,
     outputPath: values.out,
     approvalId,
     artifactPath,
     toolVersion: toolVersion(),
+    ...(source.kind === "absent" ? {} : { declaredSource: source.declaredSource }),
   });
   if (result.kind === "tool_error") return failWith(result.message);
   write(process.stdout, values.json ? result.json : renderLockSummary(result.record, values.out));

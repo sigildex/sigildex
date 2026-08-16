@@ -2,6 +2,15 @@
 
 **Spec version: 1** · Status: **LOCKED (2026-08-14)** — normative
 
+**Amendments to spec version 1** (editorial and clarifying only; no change to
+`schema_version`, the digest construction, or any record grammar):
+
+- §9.3 — the four approval-store invariants are restated explicitly, and the
+  section now says which of them the shipped tool enforces and which remain the
+  project's responsibility.
+- §9.4 — records that `declared_source` is settable at write time, and names
+  the flags that do it.
+
 This document defines how Sigildex computes the content identity of an Agent
 Skill directory. It is the normative contract for the `lock`, `check`, and
 `diff` commands and for the approval-record schema. Implementation follows this
@@ -503,13 +512,33 @@ canonical manifest lines, never over the JSON bytes.
 ### 9.3 Identity and layout rules for stored approvals
 
 When approvals are stored in a project (recommended layout
-`.sigildex/approvals/<approval-id>.lock.json`):
+`.sigildex/approvals/<approval-id>.lock.json`), the following are normative
+invariants of the approval store:
 
-- the filename derives from and must match the `approval_id`
-  (`<approval_id>.lock.json`);
-- each lock maps to exactly one normalized project-relative artifact path;
-- duplicate approval IDs, duplicate artifact paths, filename/ID disagreement,
-  or a lock whose artifact is missing are **failures** in CI enforcement.
+1. **Filename/ID agreement** — the filename derives from and must match the
+   `approval_id` (`<approval_id>.lock.json`). This holds wherever the record is
+   written, not only under `.sigildex/approvals/`.
+2. **One artifact per lock** — each lock maps to exactly one normalized
+   project-relative artifact path (§4.1 form, or `"."`).
+3. **Store uniqueness** — approval IDs are unique across the store, and so are
+   artifact paths: two records must not claim the same ID or the same artifact.
+4. **No half states** — a lock whose artifact is missing, and an artifact with
+   no lock, are both broken states.
+
+**What enforces each invariant in this version.** Invariant 1 is enforced by
+the tool: `lock` refuses to write a record whose output filename is not
+`<approval_id>.lock.json`, and it refuses before walking, so a misnamed
+destination produces exit 1 and no file. Invariant 2 is enforced by the record
+grammar (§9.1) and by `lock`'s rejection of a non-§4.1 `artifact_path`.
+Invariants 3 and 4 are **not** enforced by anything this version ships: they
+are per-pair checkable, and the published CI example checks them for the one
+artifact/record pair it is configured with, but **this version does not audit a
+directory of approvals for duplicate approval IDs, duplicate artifact paths, or
+orphaned locks.** Keeping a multi-skill store free of those conditions is the
+project's responsibility — branch protection and human review of the approvals
+directory — and it is not proved by any check Sigildex distributes. A
+conforming implementation MAY add such an audit; this specification does not
+require one, and no consumer should assume one is running.
 
 ### 9.4 `declared_source`
 
@@ -519,6 +548,16 @@ Optional orchestration metadata for update checking: `kind`, `repository`,
 input, is never verified by the tool, and MUST NOT be described as
 provenance. A lock with a tampered `declared_source` still verifies — this is
 by design and documented.
+
+A writer MUST provide a way to set these members as part of writing the
+record, so that declaring a source never requires hand-editing a lock. In this
+implementation that is the `lock` command's `--source-kind`,
+`--source-repository`, `--source-path`, `--source-commit`, and
+`--source-tracking` flags: giving none omits `declared_source` entirely, giving
+any subset records exactly those members, and `verification` is always set by
+the writer rather than supplied by the user. Values are validated against the
+§9.1 grammars before anything is walked or written, so a record can never be
+produced with a `declared_source` the validator would reject.
 
 ### 9.5 Lock validation algorithm (`check` step 2; exit 3 on any failure)
 

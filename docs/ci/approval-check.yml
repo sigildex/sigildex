@@ -1,10 +1,15 @@
 # Skill approval check — copy into .github/workflows/ in the repository that
 # holds the skill and its approval record. Set the three values under `env`.
 #
-# What it proves: the skill directory and its approval record are consistent
-# with each other, and the trusted baseline they are compared against was
-# consistent too. What it cannot prove: that the change is a good idea. That is
-# CODEOWNERS plus branch protection — see README.md next to this file.
+# What it proves, for the ONE skill/record pair named in `env`: the skill
+# directory and its approval record are consistent with each other, and the
+# trusted baseline they are compared against was consistent too.
+#
+# What it cannot prove: that the change is a good idea. That is CODEOWNERS plus
+# branch protection — see README.md next to this file. It also does not audit
+# the approvals directory: duplicate approval IDs, duplicate artifact paths, and
+# locks left behind without their artifact are not detected here, or anywhere
+# else in v0.1. Keeping the store clean is a review responsibility.
 name: Skill approval check
 
 # pull_request only. Never pull_request_target: that runs with a writable token

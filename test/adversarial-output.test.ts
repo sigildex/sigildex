@@ -100,7 +100,7 @@ function forbiddenCharacter(text: string): string | null {
 async function lockedSkill(payload: string): Promise<{ temp: string; root: string; stdout: string }> {
   const { temp, root } = await fixture("skill");
   await skillWithDescription(root, payload);
-  const result = await run(["lock", "skill", "--out", "a.lock.json"], temp);
+  const result = await run(["lock", "skill", "--out", "skill.lock.json"], temp);
   expect(result.code).toBe(0);
   return { temp, root, stdout: result.stdout };
 }
@@ -162,7 +162,7 @@ describe("lock human output (§15)", () => {
       join(root, "SKILL.md"),
       `---\nname: ${yamlQuoted(`${ESC}[2Jwiped`)}\n---\nBody\n`,
     );
-    const result = await run(["lock", "skill", "--out", "a.lock.json"], temp);
+    const result = await run(["lock", "skill", "--out", "skill.lock.json"], temp);
     expect(result.code).toBe(0);
     expect(result.stdout).toContain("\\x1B[2Jwiped");
     expect(forbiddenCharacter(result.stdout)).toBeNull();
@@ -219,9 +219,9 @@ describe("check human output over a hostile lock (§9.4, §9.5, §15)", () => {
   async function lockedRecord(): Promise<{ temp: string; record: Record<string, unknown> }> {
     const { temp, root } = await fixture("skill");
     await skillWithDescription(root, "plain");
-    const locked = await run(["lock", "skill", "--out", "a.lock.json"], temp);
+    const locked = await run(["lock", "skill", "--out", "skill.lock.json"], temp);
     expect(locked.code).toBe(0);
-    const record = JSON.parse(await readFile(join(temp, "a.lock.json"), "utf8")) as Record<string, unknown>;
+    const record = JSON.parse(await readFile(join(temp, "skill.lock.json"), "utf8")) as Record<string, unknown>;
     return { temp, record };
   }
 
@@ -267,7 +267,7 @@ describe("--json output keeps exact bytes (§9.1, §12.1)", () => {
     const payload = `${ESC}[31m${C1_CSI}31m${String.fromCodePoint(0x202e)}${DEL}raw`;
     const { temp, root } = await fixture("skill");
     await skillWithDescription(root, payload);
-    const result = await run(["lock", "skill", "--out", "a.lock.json", "--json"], temp);
+    const result = await run(["lock", "skill", "--out", "skill.lock.json", "--json"], temp);
     expect(result.code).toBe(0);
     const parsed = JSON.parse(result.stdout) as { skill: { frontmatter: { description: string } } };
     expect(parsed.skill.frontmatter.description).toBe(payload);

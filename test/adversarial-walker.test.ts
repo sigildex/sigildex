@@ -61,11 +61,11 @@ describe("adversarial: recorded-path form and traversal (§4.1, §4.2)", () => {
     const { root, temp, lockPath } = await fixture();
     await writeSkill(root);
     const attempt = (artifactPath: string) =>
-      lock({ skillRoot: root, outputPath: lockPath, approvalId: "a", artifactPath });
+      lock({ skillRoot: root, outputPath: lockPath, approvalId: "approval", artifactPath });
     for (const bad of ["../escape", "a/../../escape", "/etc/passwd", "a/", "./a", ""]) {
       expect((await attempt(bad)).kind, `expected rejection of ${JSON.stringify(bad)}`).toBe("tool_error");
     }
-    expect((await lock({ skillRoot: root, outputPath: join(temp, "dot.lock.json"), approvalId: "a", artifactPath: "." })).kind)
+    expect((await lock({ skillRoot: root, outputPath: join(temp, "dot.lock.json"), approvalId: "dot", artifactPath: "." })).kind)
       .toBe("locked");
   });
 
@@ -74,14 +74,14 @@ describe("adversarial: recorded-path form and traversal (§4.1, §4.2)", () => {
     await writeSkill(root);
     await symlink(root, join(temp, "alias"));
     const viaAlias = await lock({
-      skillRoot: root, outputPath: join(temp, "alias", "sneaky.lock.json"), approvalId: "a", artifactPath: "skill",
+      skillRoot: root, outputPath: join(temp, "alias", "sneaky.lock.json"), approvalId: "sneaky", artifactPath: "skill",
     });
     expect(viaAlias.kind).toBe("tool_error");
     expect(await readdir(root)).toEqual(["SKILL.md"]);
     // The lexical form of the same rule, and the non-aliasing sibling that must still succeed.
-    expect((await lock({ skillRoot: root, outputPath: join(root, "in.lock.json"), approvalId: "a", artifactPath: "skill" })).kind)
+    expect((await lock({ skillRoot: root, outputPath: join(root, "in.lock.json"), approvalId: "in", artifactPath: "skill" })).kind)
       .toBe("tool_error");
-    expect((await lock({ skillRoot: root, outputPath: join(temp, "ok.lock.json"), approvalId: "a", artifactPath: "skill" })).kind)
+    expect((await lock({ skillRoot: root, outputPath: join(temp, "ok.lock.json"), approvalId: "ok", artifactPath: "skill" })).kind)
       .toBe("locked");
   });
 
@@ -298,7 +298,7 @@ describe("adversarial: binary, empty, and limit boundaries (§3.1, §10, §11)",
   it("§10.3 / row 10: a zero-byte SKILL.md locks with frontmatter_status \"missing\"", async () => {
     const { root, lockPath } = await fixture();
     await writeFile(join(root, "SKILL.md"), "");
-    const result = await lock({ skillRoot: root, outputPath: lockPath, approvalId: "a", artifactPath: "skill" });
+    const result = await lock({ skillRoot: root, outputPath: lockPath, approvalId: "approval", artifactPath: "skill" });
     expect(result.kind).toBe("locked");
     if (result.kind !== "locked") return;
     expect(result.record.skill).toEqual({ frontmatter_status: "missing", frontmatter: null });

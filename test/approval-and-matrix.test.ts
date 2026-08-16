@@ -101,14 +101,14 @@ describe("fixed fail-closed matrix and check evaluation order", () => {
   it("row 8: lock rejects a tree missing root SKILL.md", async () => {
     const { root, lockPath } = await fixture();
     await writeFile(join(root, "other"), "x");
-    expect((await lock({ skillRoot: root, outputPath: lockPath, approvalId: "a", artifactPath: "skill" })).kind)
+    expect((await lock({ skillRoot: root, outputPath: lockPath, approvalId: "approval", artifactPath: "skill" })).kind)
       .toBe("tool_error");
   });
 
   it("row 10: malformed frontmatter proceeds and is recorded invalid", async () => {
     const { root, lockPath } = await fixture();
     await writeFile(join(root, "SKILL.md"), "---\na: [broken\n---\n");
-    const result = await lock({ skillRoot: root, outputPath: lockPath, approvalId: "a", artifactPath: "skill" });
+    const result = await lock({ skillRoot: root, outputPath: lockPath, approvalId: "approval", artifactPath: "skill" });
     expect(result.kind).toBe("locked");
     if (result.kind === "locked") expect(result.record.skill).toEqual({ frontmatter_status: "invalid", frontmatter: null });
   });

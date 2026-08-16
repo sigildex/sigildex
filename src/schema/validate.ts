@@ -230,15 +230,54 @@ function validateSkill(value: unknown): SkillMetadata | null {
   return null;
 }
 
-function validateDeclaredSource(value: unknown): DeclaredSource | null {
-  const allowed = ["kind", "repository", "path", "approved_commit", "tracking_policy", "verification"];
-  if (!objectValue(value) || !exactKeys(value, ["verification"], allowed.filter((key) => key !== "verification"))) return null;
+/** One optional `declared_source` member: its §9.1 grammar and a human-readable statement of it. */
+export interface DeclaredSourceFieldRule {
+  /** Phrased to complete the sentence "<field> must be ...". */
+  readonly rule: string;
+  readonly accepts: (value: string) => boolean;
+}
+
+/**
+ * The single definition of the optional `declared_source` grammars. Both the
+ * record validator and the writer that builds a record from user input read
+ * their rules from here, so the two can never drift apart.
+ */
+export const DECLARED_SOURCE_FIELDS: Readonly<Record<
+  "kind" | "repository" | "path" | "approved_commit" | "tracking_policy",
+  DeclaredSourceFieldRule
+>> = {
+  kind: {
+    rule: "1 to 32 characters from [a-z0-9-]",
+    accepts: (value) => /^[a-z0-9-]{1,32}$/.test(value),
+  },
+  repository: {
+    rule: "at most 512 UTF-8 bytes",
+    accepts: (value) => Buffer.byteLength(value, "utf8") <= 512,
+  },
+  path: {
+    rule: 'a relative POSIX path with no "." or ".." component, or the literal "."',
+    accepts: (value) => validateRecordedPath(value, true) === null,
+  },
+  approved_commit: {
+    rule: "7 to 64 lowercase hexadecimal characters",
+    accepts: (value) => /^[0-9a-f]{7,64}$/.test(value),
+  },
+  tracking_policy: {
+    rule: "at most 128 UTF-8 bytes",
+    accepts: (value) => Buffer.byteLength(value, "utf8") <= 128,
+  },
+};
+
+const DECLARED_SOURCE_OPTIONAL_KEYS = Object.keys(DECLARED_SOURCE_FIELDS) as (keyof typeof DECLARED_SOURCE_FIELDS)[];
+
+export function validateDeclaredSource(value: unknown): DeclaredSource | null {
+  if (!objectValue(value) || !exactKeys(value, ["verification"], DECLARED_SOURCE_OPTIONAL_KEYS)) return null;
   if (value.verification !== "user_supplied") return null;
-  if (value.kind !== undefined && (typeof value.kind !== "string" || !/^[a-z0-9-]{1,32}$/.test(value.kind))) return null;
-  if (value.repository !== undefined && (typeof value.repository !== "string" || Buffer.byteLength(value.repository) > 512)) return null;
-  if (value.path !== undefined && (typeof value.path !== "string" || validateRecordedPath(value.path, true) !== null)) return null;
-  if (value.approved_commit !== undefined && (typeof value.approved_commit !== "string" || !/^[0-9a-f]{7,64}$/.test(value.approved_commit))) return null;
-  if (value.tracking_policy !== undefined && (typeof value.tracking_policy !== "string" || Buffer.byteLength(value.tracking_policy) > 128)) return null;
+  for (const key of DECLARED_SOURCE_OPTIONAL_KEYS) {
+    const member = value[key];
+    if (member === undefined) continue;
+    if (typeof member !== "string" || !DECLARED_SOURCE_FIELDS[key].accepts(member)) return null;
+  }
   return value as unknown as DeclaredSource;
 }
 

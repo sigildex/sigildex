@@ -14,7 +14,7 @@
 import { execFileSync } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
@@ -147,8 +147,11 @@ function writeSide(seed: string, scratch: string, side: Side, baseLock: string |
   } else if (side.lockOf !== undefined) {
     const alternate = mkdtempSync(join(scratch, "alt-"));
     writeTree(join(alternate, skillDir), side.lockOf);
-    sigildexLock(alternate, skillDir, "alt.lock.json");
-    bytes = readFileSync(join(alternate, "alt.lock.json"), "utf8");
+    // §9.3: the output filename must be `<approval_id>.lock.json`, and the id
+    // defaults to the skill directory's own name.
+    const alternateLock = `${basename(skillDir)}.lock.json`;
+    sigildexLock(alternate, skillDir, alternateLock);
+    bytes = readFileSync(join(alternate, alternateLock), "utf8");
   } else {
     sigildexLock(seed, skillDir, approval);
     bytes = readFileSync(join(seed, approval), "utf8");

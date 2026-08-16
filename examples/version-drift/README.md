@@ -52,12 +52,23 @@ sigildex lock skill-v1 \
 ```
 
 Exit `0`. The record lists every in-scope file with its SHA-256, size, and
-executable bit, plus a root digest over that manifest. The lock is refused if
-you try to write it inside the tree it measures — an approval record can never
-end up inside its own manifest:
+executable bit, plus a root digest over that manifest.
+
+The output filename is not free-form: it must be `<approval-id>.lock.json`, so a
+record and its id can never disagree about which approval it is. A mismatch is
+refused before anything is walked:
 
 ```sh
-sigildex lock skill-v1 --approval-id log-summarizer-self --out skill-v1/self.lock.json
+sigildex lock skill-v1 --approval-id log-summarizer-v1 --out approvals/v1.lock.json
+```
+
+Exit `1`, no file written — the expected name is `log-summarizer-v1.lock.json`.
+
+The lock is also refused if you try to write it inside the tree it measures — an
+approval record can never end up inside its own manifest:
+
+```sh
+sigildex lock skill-v1 --approval-id log-summarizer-self --out skill-v1/log-summarizer-self.lock.json
 ```
 
 Exit `1`, no file written.

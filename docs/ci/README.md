@@ -20,6 +20,10 @@ loop the final step over a list.
   the corresponding change to its approval record fails. So does an approval
   record with no artifact, and an artifact with no approval record.
 
+All three hold for the **one** skill/record pair named in `env`. Nothing here
+looks at any other entry in `.sigildex/approvals/` — see "What it cannot prove"
+below.
+
 When the skill existed at the base commit, it also attaches an approval delta to
 the job summary — how many files were added, removed, and changed — so a
 reviewer knows the size of what they are approving before opening the diff. A
@@ -54,9 +58,14 @@ Result table, for the states the workflow distinguishes:
   what a remote instruction returns at runtime. Re-check at install time, and
   again before activation if your threat model needs it.
 - **Approval-layout rules across many skills.** Approval IDs and artifact paths
-  must be unique across a project, and each record's filename must match its
-  `approval_id`. The single-skill snippet does not audit the whole
-  `.sigildex/approvals/` directory for that.
+  must be unique across a project, and no lock may be left behind without its
+  artifact. **v0.1 does not audit a directory of approvals for duplicate
+  approval IDs, duplicate artifact paths, or orphaned locks** — not this
+  workflow, and not the tool. Keeping the store clean is the project's
+  responsibility: put `.sigildex/approvals/` under CODEOWNERS and review
+  additions to it, as described below. The one layout rule that *is* enforced —
+  a record's filename matching its `approval_id` — is enforced by `sigildex
+  lock` at write time, which refuses to write a misnamed record at all.
 - **The integrity of its own supply chain.** The workflow installs the tool from
   the public registry at a pinned version. Pin deliberately, review version
   bumps like any other dependency change, and vendor the tool instead if your

@@ -219,7 +219,7 @@ describe("fail-closed walker", () => {
 
   it("refuses a lock output path inside the tree before walking", async () => {
     const { root } = await fixture();
-    const result = await lock({ skillRoot: root, outputPath: join(root, "lock.json"), approvalId: "a", artifactPath: "skill" });
+    const result = await lock({ skillRoot: root, outputPath: join(root, "a.lock.json"), approvalId: "a", artifactPath: "skill" });
     expect(result.kind).toBe("tool_error");
   });
 

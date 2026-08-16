@@ -142,7 +142,7 @@ describe("approval identity rules the CLI enforces (§9.3)", () => {
     await writeInstalledSkill(root, "Instructions");
     for (const candidate of ["../escape", "/etc/skills/demo", "./skill", "skill/", ""]) {
       const result = await run(
-        ["lock", "skill", "--artifact-path", candidate, "--out", "a.lock.json"],
+        ["lock", "skill", "--artifact-path", candidate, "--out", "skill.lock.json"],
         temp,
       );
       expect([candidate, result.code]).toEqual([candidate, 1]);
@@ -221,8 +221,11 @@ describe("detecting an update never modifies the active installation (§12, §12
     expect(installed.code).toBe(0);
     expect(installed.stdout).toContain("Match:");
 
+    // The probe carries the same approval id as the stored record, so §9.3 fixes
+    // its filename too; a scratch directory keeps the stored record untouched.
+    await mkdir(join(temp, "probe"), { recursive: true });
     const recomputed = await run(
-      ["lock", "active", "--approval-id", "active", "--out", "probe.lock.json", "--json"],
+      ["lock", "active", "--approval-id", "active", "--out", "probe/active.lock.json", "--json"],
       temp,
     );
     expect(recomputed.code).toBe(0);

@@ -31,10 +31,13 @@ function run(args: readonly string[], cwd: string): Promise<Run> {
 }
 
 async function lockedFixture(): Promise<{ temp: string; root: string; lockPath: string }> {
-  const { temp, root, lockPath } = await fixture("skill");
+  const { temp, root } = await fixture("skill");
   await writeSkill(root, "name: demo\ndescription: a demo skill");
   await writeFile(join(root, "notes.txt"), "reference\n");
-  const result = await run(["lock", "skill", "--out", "approval.lock.json"], temp);
+  // §9.3: the record's filename is `<approval_id>.lock.json`, and the id is
+  // derived from the directory name when --approval-id is not given.
+  const lockPath = join(temp, "skill.lock.json");
+  const result = await run(["lock", "skill", "--out", "skill.lock.json"], temp);
   expect(result.code).toBe(0);
   return { temp, root, lockPath };
 }
@@ -49,14 +52,14 @@ describe("cli lock", () => {
       approval_id: "skill",
       artifact_path: "skill",
     });
-    const summary = await run(["lock", "skill", "--out", "second.lock.json"], temp);
+    const summary = await run(["lock", "skill", "--out", "skill.lock.json"], temp);
     expect(summary.code).toBe(0);
     expect(summary.stdout).toContain("root digest:");
   });
 
   it("prints the record itself with --json", async () => {
     const { temp } = await lockedFixture();
-    const result = await run(["lock", "skill", "--out", "json.lock.json", "--json"], temp);
+    const result = await run(["lock", "skill", "--out", "skill.lock.json", "--json"], temp);
     expect(result.code).toBe(0);
     const parsed = JSON.parse(result.stdout) as { root_digest: string };
     expect(parsed.root_digest.startsWith("sha256:")).toBe(true);
@@ -67,7 +70,7 @@ describe("cli lock", () => {
 
   it("refuses to write the record inside the walked tree", async () => {
     const { temp } = await lockedFixture();
-    const result = await run(["lock", "skill", "--out", "skill/approval.lock.json"], temp);
+    const result = await run(["lock", "skill", "--out", "skill/skill.lock.json"], temp);
     expect(result.code).toBe(1);
     expect(result.stderr).toContain("Error:");
   });
@@ -81,7 +84,7 @@ describe("cli lock", () => {
 
   it("rejects an unknown flag", async () => {
     const { temp } = await lockedFixture();
-    const result = await run(["lock", "skill", "--out", "x.lock.json", "--force"], temp);
+    const result = await run(["lock", "skill", "--out", "skill.lock.json", "--force"], temp);
     expect(result.code).toBe(1);
     expect(result.stderr).toContain("Error:");
   });
@@ -96,7 +99,7 @@ describe("cli lock", () => {
   it("derives an approval id from an awkward directory name", async () => {
     const { temp } = await fixture("My Skill (v2)!");
     await writeSkill(join(temp, "My Skill (v2)!"));
-    const result = await run(["lock", "My Skill (v2)!", "--out", "a.lock.json", "--json"], temp);
+    const result = await run(["lock", "My Skill (v2)!", "--out", "my-skill-v2.lock.json", "--json"], temp);
     expect(result.code).toBe(0);
     expect((JSON.parse(result.stdout) as { approval_id: string }).approval_id).toBe("my-skill-v2");
   });
@@ -109,7 +112,7 @@ describe("cli lock", () => {
       join(root, "SKILL.md"),
       `---\nname: demo\ndescription: "${escape}[31mred${escape}]0;evil${bell}"\n---\nBody\n`,
     );
-    const result = await run(["lock", "skill", "--out", "a.lock.json"], temp);
+    const result = await run(["lock", "skill", "--out", "skill.lock.json"], temp);
     expect(result.code).toBe(0);
     expect(result.stdout).toContain("description:");
     expect(result.stdout.includes(escape)).toBe(false);
@@ -121,7 +124,7 @@ describe("cli lock", () => {
 describe("cli check", () => {
   it("exits 0 when the artifact matches", async () => {
     const { temp } = await lockedFixture();
-    const result = await run(["check", "skill", "--against", "approval.lock.json"], temp);
+    const result = await run(["check", "skill", "--against", "skill.lock.json"], temp);
     expect(result.code).toBe(0);
     expect(result.stdout).toContain("Match");
   });
@@ -129,10 +132,10 @@ describe("cli check", () => {
   it("exits 2 on a tampered artifact and prints the drift report as JSON", async () => {
     const { temp, root } = await lockedFixture();
     await writeFile(join(root, "notes.txt"), "tampered\n");
-    const human = await run(["check", "skill", "--against", "approval.lock.json"], temp);
+    const human = await run(["check", "skill", "--against", "skill.lock.json"], temp);
     expect(human.code).toBe(2);
     expect(human.stdout).toContain("notes.txt");
-    const json = await run(["check", "skill", "--against", "approval.lock.json", "--json"], temp);
+    const json = await run(["check", "skill", "--against", "skill.lock.json", "--json"], temp);
     expect(json.code).toBe(2);
     const report = JSON.parse(json.stdout) as { modified: { path: string }[] };
     expect(report.modified.map((file) => file.path)).toEqual(["notes.txt"]);
@@ -141,7 +144,7 @@ describe("cli check", () => {
   it("exits 2 when a file gains the executable bit", async () => {
     const { temp, root } = await lockedFixture();
     await chmod(join(root, "notes.txt"), 0o755);
-    const result = await run(["check", "skill", "--against", "approval.lock.json", "--json"], temp);
+    const result = await run(["check", "skill", "--against", "skill.lock.json", "--json"], temp);
     expect(result.code).toBe(2);
     const report = JSON.parse(result.stdout) as { mode_changed: { path: string }[] };
     expect(report.mode_changed.map((file) => file.path)).toEqual(["notes.txt"]);
@@ -174,7 +177,7 @@ describe("cli check", () => {
   it("exits 1 when the artifact contains a symlink", async () => {
     const { temp, root } = await lockedFixture();
     await symlink(join(root, "notes.txt"), join(root, "link.txt"));
-    const result = await run(["check", "skill", "--against", "approval.lock.json"], temp);
+    const result = await run(["check", "skill", "--against", "skill.lock.json"], temp);
     expect(result.code).toBe(1);
   });
 });
@@ -262,13 +265,13 @@ describe("cli shell", () => {
     });
     let code: number;
     try {
-      code = await main(["lock", root, "--out", join(temp, "windows.lock.json")]);
+      code = await main(["lock", root, "--out", join(temp, "skill.lock.json")]);
     } finally {
       stderr.mockRestore();
       Object.defineProperty(process, "platform", platform);
     }
     expect(code).toBe(1);
     expect(written.join("")).toContain("does not support Windows");
-    await expect(readFile(join(temp, "windows.lock.json"), "utf8")).rejects.toThrow();
+    await expect(readFile(join(temp, "skill.lock.json"), "utf8")).rejects.toThrow();
   });
 });

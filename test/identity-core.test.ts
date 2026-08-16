@@ -22,13 +22,16 @@ describe("raw content identity and deterministic locks", () => {
     await mkdir(join(root, "references"));
     await writeFile(join(root, "references", "guide.txt"), "hello\n");
     const first = await lock({
-      skillRoot: root, outputPath: lockPath, approvalId: "demo", artifactPath: "skills/demo",
+      skillRoot: root, outputPath: lockPath, approvalId: "approval", artifactPath: "skills/demo",
       createdAt: "2026-08-14T10:00:00Z",
     });
     expect(first.kind).toBe("locked");
     expect((await check({ skillRoot: root, lockPath })).kind).toBe("match");
+    // The re-lock carries the same approval id, so §9.3 puts it under the same
+    // filename — a sibling directory keeps the first record intact.
+    await mkdir(join(temp, "second"));
     const second = await lock({
-      skillRoot: root, outputPath: join(temp, "second.lock.json"), approvalId: "demo", artifactPath: "skills/demo",
+      skillRoot: root, outputPath: join(temp, "second", "approval.lock.json"), approvalId: "approval", artifactPath: "skills/demo",
       createdAt: "2026-08-14T10:00:01Z",
     });
     expect(second.kind).toBe("locked");
@@ -87,7 +90,7 @@ describe("raw content identity and deterministic locks", () => {
     await writeSkill(root);
     const script = join(root, "run.sh");
     await writeFile(script, "#!/bin/sh\n");
-    const locked = await lock({ skillRoot: root, outputPath: lockPath, approvalId: "mode", artifactPath: "skill" });
+    const locked = await lock({ skillRoot: root, outputPath: lockPath, approvalId: "approval", artifactPath: "skill" });
     expect(locked.kind).toBe("locked");
     await chmod(script, 0o755);
     const checked = await check({ skillRoot: root, lockPath });

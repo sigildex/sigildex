@@ -7,7 +7,7 @@ import { fixture } from "./helpers.js";
 async function lockSkill(contents: string) {
   const { root, lockPath } = await fixture();
   await writeFile(join(root, "SKILL.md"), contents);
-  return lock({ skillRoot: root, outputPath: lockPath, approvalId: "frontmatter", artifactPath: "skill" });
+  return lock({ skillRoot: root, outputPath: lockPath, approvalId: "approval", artifactPath: "skill" });
 }
 
 describe("bounded SKILL.md frontmatter", () => {

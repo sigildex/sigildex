@@ -33,7 +33,8 @@ export const TARGETS = [
  * @param {{approvalId: string, directory: string}} target
  * @param {string} [outputDirectory] destination for the lock file; defaults to
  *   the committed ./approvals directory. Must never be inside the skill tree
- *   (identity-spec §3.3 refuses that outright).
+ *   (identity-spec §3.3 refuses that outright). Only the directory varies: the
+ *   filename is always `<approvalId>.lock.json`, which §9.3 requires.
  */
 export async function lockTarget(target, outputDirectory = join(here, "approvals")) {
   await mkdir(outputDirectory, { recursive: true });

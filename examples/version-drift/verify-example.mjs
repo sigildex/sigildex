@@ -120,15 +120,35 @@ async function main() {
     await expectCheck("a missing lock file is a tool error", v2, join(scratch, "absent.lock.json"), 1);
     await expectCheck("a missing skill directory is a tool error", join(scratch, "absent-skill"), lockV2, 1);
 
-    // 9. The lock output can never land inside the tree it measures (§3.3).
+    // 9. The lock output can never land inside the tree it measures (§3.3). The
+    //    filename matches the approval id (§9.3), so self-inclusion is the only
+    //    rule this case can be failing.
     const selfInclusion = await lock({
       skillRoot: v2,
-      outputPath: join(v2, "self.lock.json"),
+      outputPath: join(v2, "log-summarizer-self.lock.json"),
       approvalId: "log-summarizer-self",
       artifactPath: "examples/version-drift/skill-v2",
       createdAt: CREATED_AT,
     });
-    report(selfInclusion.kind === "tool_error", "writing a lock inside the skill tree is refused", selfInclusion.kind === "tool_error" ? selfInclusion.message : "unexpectedly locked");
+    report(
+      selfInclusion.kind === "tool_error" && selfInclusion.message.includes("beneath the skill root"),
+      "writing a lock inside the skill tree is refused",
+      selfInclusion.kind === "tool_error" ? selfInclusion.message : "unexpectedly locked",
+    );
+
+    // 10. §9.3: the output filename must be `<approval_id>.lock.json`.
+    const misnamed = await lock({
+      skillRoot: v2,
+      outputPath: join(scratch, "approval.lock.json"),
+      approvalId: "log-summarizer-v2",
+      artifactPath: "examples/version-drift/skill-v2",
+      createdAt: CREATED_AT,
+    });
+    report(
+      misnamed.kind === "tool_error" && misnamed.message.includes("log-summarizer-v2.lock.json"),
+      "a lock output filename that disagrees with the approval id is refused",
+      misnamed.kind === "tool_error" ? misnamed.message : "unexpectedly locked",
+    );
   } finally {
     await rm(scratch, { recursive: true, force: true });
   }
