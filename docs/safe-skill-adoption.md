@@ -68,8 +68,9 @@ For what this workflow defends against and what it explicitly does not, see
 Candidates come from several places, and where a skill comes from is part of
 what you are evaluating:
 
-- **Ecosystem CLIs and catalogs** — the GitHub CLI's `gh skill` (public
-  preview), the Vercel Skills CLI and skills.sh, and similar catalogs.
+- **Ecosystem CLIs and catalogs** — the GitHub CLI's `gh skill` (preview, built
+  in from version 2.90.0), the Vercel Skills CLI and skills.sh, and similar
+  catalogs.
 - **Publisher repositories** — a vendor or framework author shipping skills
   alongside their product.
 - **Internal repositories** — skills your own organization wrote.
@@ -126,44 +127,52 @@ Run more than one — they disagree, and the disagreements are informative.
 
 ### Scanner examples
 
-*Commands below were taken from each project's published documentation as of
-2026-08-15. All three projects are young and moving; verify each command against
+*Commands below were run against each project's published documentation as of
+2026-08-16. All three projects are young and moving; verify each command against
 the tool's current documentation before relying on exact syntax.*
 
-**NVIDIA SkillSpector** — <https://github.com/NVIDIA/SkillSpector>
+**NVIDIA SkillSpector** — <https://github.com/NVIDIA/skillspector>
 
-<!-- external-command smoke: pending -->
+<!-- external-command smoke: 2026-08-16 PASS (skillspector 2.9.5) -->
 
 ```sh
 uv tool install git+https://github.com/NVIDIA/skillspector.git
 skillspector scan ~/skill-review/log-summarizer --no-llm --format json --output ~/skill-review/skillspector.json
 ```
 
-`--no-llm` restricts it to static pattern and AST analysis; omit it to enable
-semantic evaluation through a configured model provider.
+`--no-llm` restricts it to static pattern and AST analysis, which needs no API
+key and no network; omit it to enable semantic evaluation through a configured
+model provider. To run it without installing it first, use
+`uvx --from git+https://github.com/NVIDIA/skillspector.git skillspector scan …`.
+It exits non-zero on a do-not-install verdict while still writing a valid
+report, so read the JSON file rather than branching on the exit code.
 
 **Cisco AI Defense Skill Scanner** — <https://github.com/cisco-ai-defense/skill-scanner>
 
-<!-- external-command smoke: pending -->
+<!-- external-command smoke: 2026-08-16 PASS (skill-scanner 2.0.13) -->
 
 ```sh
 pip install cisco-ai-skill-scanner
 skill-scanner scan ~/skill-review/log-summarizer --format json
 ```
 
-Additional analyzers are opt-in flags; consult the project's documentation for
-the current set and for the API keys some of them require.
+`uvx --from cisco-ai-skill-scanner skill-scanner scan …` runs it without
+installing it. The default run is offline; LLM and network analyzers are opt-in
+flags. Consult the project's documentation for the current set and for the API
+keys some of them require.
 
 **Snyk Agent Scan** — <https://github.com/snyk/agent-scan>
 
-<!-- external-command smoke: pending -->
+<!-- external-command smoke: 2026-08-16 BLOCKED (requires SNYK_TOKEN); command reshaped per docs -->
 
 ```sh
-uvx snyk-agent-scan@latest ~/skill-review/log-summarizer --json
+SNYK_TOKEN=<your-token> uvx snyk-agent-scan@latest scan --json
 ```
 
-Point it at the staged directory, not at your active skills directory, when the
-goal is to evaluate a candidate.
+Agent Scan requires a Snyk API token and is machine-scoped rather than
+directory-scoped: it finds skills in well-known install locations. It suits
+auditing what is already installed, not pointing at a single quarantined
+directory — use SkillSpector or the Cisco scanner for that step.
 
 If a scanner's syntax has changed since this guide was written, the shape of the
 step has not: *point a scanner at the quarantined directory, capture
@@ -321,22 +330,25 @@ Two levels, both legitimate:
 Right for personal installs. Ask your agent — or run it yourself — whenever you
 want to know.
 
-With the GitHub CLI (`gh skill` is **public preview** and subject to change
-without notice; taken from the GitHub CLI manual, <https://cli.github.com/manual/>,
-as of 2026-08-15 — verify against the tool's current documentation):
+With the GitHub CLI (`gh skill` is built in from version 2.90.0 onward and is
+still labelled **preview** in its own help, so it is subject to change; checked
+against the manual, <https://cli.github.com/manual/gh_skill_update>, as of
+2026-08-16 — verify against the tool's current documentation):
 
-<!-- external-command smoke: pending -->
+<!-- external-command smoke: 2026-08-16 PASS (gh 2.97.0) -->
 
 ```sh
 gh skill update --dry-run
 ```
 
-`--dry-run` reports available updates without modifying any files. It compares
-the local tree SHA recorded in a skill's frontmatter against the remote
-repository. Skills installed with `--pin` are skipped with a notice; `--unpin`
-clears the pin and includes them. Other installers offer equivalent read-only
-modes — use those, and read their documentation to confirm the mode does not
-write.
+Requires GitHub CLI 2.90.0 or newer. `--dry-run` reports available updates
+without modifying any files. It compares the local tree SHA recorded in a
+skill's frontmatter against the remote repository. The flags `gh skill update`
+accepts are exactly `--all`, `--dir`, `--dry-run`, `--force`, and `--unpin`.
+Skills installed with `gh skill install --pin` are skipped with a notice —
+`--pin` is an install-time flag, not an update flag — and `--unpin` clears the
+pin and includes them. Other installers offer equivalent read-only modes — use
+those, and read their documentation to confirm the mode does not write.
 
 ### Scheduled checks
 
@@ -450,7 +462,8 @@ again.
   can detect upstream changes. You get notification; Sigildex prevents the change
   from becoming trusted automatically.
 - **Installer-pinned installation** — stronger pinning, but update checks may
-  skip pinned skills entirely (`gh skill update` does, with a notice). Pair
+  skip pinned skills entirely (`gh skill update` skips anything installed with
+  `gh skill install --pin`, with a notice). Pair
   pinning with a release or repository watcher so that "pinned" does not quietly
   become "unwatched".
 

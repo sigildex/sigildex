@@ -213,9 +213,10 @@ release.
 
 Sigildex is complementary to the rest of the ecosystem, and deliberately does
 not compete with any of it. Discovery tools such as the GitHub CLI's `gh skill`
-(public preview) and the Vercel Skills CLI find skills and install them.
-Scanners such as NVIDIA SkillSpector, the Cisco AI Defense Skill Scanner, and
-Snyk Agent Scan analyze a candidate and produce evidence about it. Package
+(preview) and the Vercel Skills CLI find skills and install them.
+Scanners such as NVIDIA SkillSpector and the Cisco AI Defense Skill Scanner
+analyze a candidate directory and produce evidence about it, and Snyk Agent Scan
+audits the skills already installed on a machine. Package
 managers and installers put skills on disk and can tell you when upstream has
 moved. Several small projects hash skill directories. Sigildex is not the first
 tool to compute a digest over a skill, and it does not replace any of the above:

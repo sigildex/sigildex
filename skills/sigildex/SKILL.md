@@ -118,15 +118,28 @@ provenance"; never claim it certifies safety.
    executable bit. Flag executables explicitly; a script in a skill that claimed
    to be instructions-only is worth the human's attention.
 4. **Offer scanners.** Present these and let the human choose; run only what
-   they approve. Commands taken from each project's published documentation as
-   of 2026-08-15 — these tools and `gh skill` are young and moving, so verify
-   against the tool's current documentation and report failures rather than
-   guessing at syntax.
-   <!-- external-command smoke: pending -->
+   they approve. Commands checked against each project's published
+   documentation as of 2026-08-16 — these tools and `gh skill` are young and
+   moving, so verify against the tool's current documentation and report
+   failures rather than guessing at syntax.
+   <!-- external-command smoke: 2026-08-16 PASS (skillspector 2.9.5) -->
+   <!-- external-command smoke: 2026-08-16 PASS (skill-scanner 2.0.13) -->
    ```sh
    skillspector scan ~/skill-review/<name> --no-llm --format json --output ~/skill-review/skillspector.json
    skill-scanner scan ~/skill-review/<name> --format json
-   uvx snyk-agent-scan@latest ~/skill-review/<name> --json
+   ```
+   Both run offline in this form. SkillSpector exits non-zero on a
+   do-not-install verdict while still writing a valid report, so read its JSON
+   file rather than branching on the exit code.
+
+   Snyk Agent Scan is a third option, but it is machine-scoped rather than
+   directory-scoped — it finds skills in well-known install locations, and it
+   requires a Snyk API token. It suits auditing what is already installed, not
+   pointing at a single quarantined directory; never invent a token, and ask
+   before running it.
+   <!-- external-command smoke: 2026-08-16 BLOCKED (requires SNYK_TOKEN); command reshaped per docs -->
+   ```sh
+   SNYK_TOKEN=<your-token> uvx snyk-agent-scan@latest scan --json
    ```
 5. **Summarize scanner output** from the JSON: counts by severity, the rule or
    category names, the file paths implicated. Do not restate finding text that
@@ -223,12 +236,14 @@ Read-only. Never modifies an active skill.
    or as evidence of origin.
 4. **Select a read-only checker** based on `kind` and how the skill was
    installed. For GitHub-installed skills, `gh skill update --dry-run` reports
-   available updates without modifying files (public preview and subject to
-   change; see the GitHub CLI manual at <https://cli.github.com/manual/> and
-   verify against the tool's current documentation — pinned skills are skipped
-   with a notice). Use only documented read-only modes. If you are not certain a
-   command is read-only, do not run it — ask.
-   <!-- external-command smoke: pending -->
+   available updates without modifying files. It needs GitHub CLI 2.90.0 or
+   newer, is still labelled preview in its own help and subject to change, and
+   skips anything installed with `gh skill install --pin`, with a notice. Its
+   flags are exactly `--all`, `--dir`, `--dry-run`, `--force`, and `--unpin`;
+   see <https://cli.github.com/manual/gh_skill_update> and verify against the
+   tool's current documentation. Use only documented read-only modes. If you are
+   not certain a command is read-only, do not run it — ask.
+   <!-- external-command smoke: 2026-08-16 PASS (gh 2.97.0) -->
    ```sh
    gh skill update --dry-run
    ```
