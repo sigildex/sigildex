@@ -24,3 +24,8 @@ that a skill, script, dependency, remote service, installer, or runtime behavior
 is safe. Reports that a given skill is malicious are out of scope; reports that
 Sigildex misreports identity, fails to detect drift, or is itself exploitable
 are in scope.
+
+[docs/threat-model.md](docs/threat-model.md) sets out the assets, the trust
+boundaries, the attacker classes considered, and the residual risks that are
+explicitly out of scope. Read it before reporting, so a report can say which
+boundary it crosses.
