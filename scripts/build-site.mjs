@@ -45,7 +45,8 @@ const COPIES = [
   ["SECURITY.md", "security.md"],
   ["docs/postmortem.md", "postmortem.md"],
   ["docs/case-study.md", "case-study.md"],
-  ["README.md", "README.md"],
+  // README.md is deliberately not mirrored: the static host does not serve a
+  // root README.md, and llms.txt already points at the repository copy.
 ];
 
 /** Hosted paths that no longer exist, answered with 410 and a JSON body. */

@@ -302,7 +302,7 @@ describe("retired hosted routes", () => {
     // The front page's own /docs links point at the repository, not at the
     // retired site paths, so nothing on the page hits this redirect.
     for (const pattern of moved.map((route) => new RegExp(route["src"] as string))) {
-      expect(pattern.test("/README.md")).toBe(false);
+      expect(pattern.test("/llms.txt")).toBe(false);
     }
   });
 });
