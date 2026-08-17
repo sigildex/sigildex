@@ -284,7 +284,8 @@ Read-only. Never modifies an active skill.
    or as evidence of origin.
 4. **Select a read-only checker** based on `kind` and how the skill was
    installed. For GitHub-installed skills, `gh skill update --dry-run` reports
-   available updates without modifying files. It needs GitHub CLI 2.90.0 or
+   available updates without modifying files. It needs GitHub's CLI (`gh`, a
+   separate tool the human installs), version 2.90.0 or
    newer, is still labelled preview in its own help and subject to change, and
    skips anything installed with `gh skill install --pin`, with a notice. Its
    flags are exactly `--all`, `--dir`, `--dry-run`, `--force`, and `--unpin`;

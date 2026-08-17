@@ -9,6 +9,13 @@
       "continue": true
     },
     {
+      "src": "^/(.*)\\.ya?ml$",
+      "headers": {
+        "Content-Type": "text/yaml; charset=utf-8"
+      },
+      "continue": true
+    },
+    {
       "src": "^/(llms\\.txt|robots\\.txt|\\.well-known/security\\.txt)$",
       "headers": {
         "Content-Type": "text/plain; charset=utf-8"

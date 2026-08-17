@@ -7,6 +7,13 @@ deliberately, and noticing when what you approved changes.
 > connects them into a durable workflow by recording exactly what was approved
 > and detecting when that artifact changes.
 
+**Before you start.** Every `sigildex` command below needs the tool on your
+path, and Node.js 20 or later. v0.1 is not published yet; when it is, it will
+install from npm as `sigildex` (`npm install -g sigildex`). Until then, build it
+from the repository — the quickstart in
+[README.md](../README.md#five-minutes) clones, builds, and runs the whole
+lifecycle against the bundled example trees in about five minutes.
+
 ## Overview and trust model
 
 An agent skill is instructions — and often scripts — that you hand to a system
@@ -366,7 +373,8 @@ Two levels, both legitimate:
 Right for personal installs. Ask your agent — or run it yourself — whenever you
 want to know.
 
-With the GitHub CLI (`gh skill` is built in from version 2.90.0 onward and is
+With GitHub's CLI (`gh`, version 2.90 or newer — a separate tool you install
+yourself; `gh skill` is built in from version 2.90.0 onward and is
 still labelled **preview** in its own help, so it is subject to change; checked
 against the manual, <https://cli.github.com/manual/gh_skill_update>, as of
 2026-08-16 — verify against the tool's current documentation):
@@ -405,6 +413,11 @@ It is **user-supplied and never verified**. It sits outside the identity digest,
 so adding or changing it does not affect whether an artifact matches. It is an
 orchestration hint. It is not provenance, and must not be described as such.
 
+`kind` is a free-form label — `git`, `registry`, `local`, or whatever your own
+tooling reads — recorded as you wrote it and never interpreted by the tool;
+the examples in this guide all use `git`, and the only rule is the grammar
+below.
+
 You never hand-edit the JSON to set it. `lock` writes it from the `--source-*`
 flags, so an update source is configured by re-recording the approval:
 
@@ -413,7 +426,7 @@ mkdir -p .sigildex/approvals
 sigildex lock .claude/skills/log-summarizer \
   --approval-id log-summarizer \
   --out .sigildex/approvals/log-summarizer.lock.json \
-  --source-kind github \
+  --source-kind git \
   --source-repository https://github.com/example-org/example-skills \
   --source-path skills/log-summarizer \
   --source-commit a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0 \
@@ -501,7 +514,7 @@ sigildex lock ~/skill-review/log-summarizer-next \
   --approval-id log-summarizer \
   --artifact-path .claude/skills/log-summarizer \
   --out .sigildex/approvals/log-summarizer.lock.json \
-  --source-kind github \
+  --source-kind git \
   --source-repository https://github.com/example-org/example-skills \
   --source-path skills/log-summarizer \
   --source-commit <the-commit-you-reviewed> \

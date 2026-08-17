@@ -1,6 +1,6 @@
 # Case study: designing an API for agent-first, programmatic use
 
-*Prepared for the v0.1 release, 2026-08. Figures are from the project's internal records; where a number is an estimate or a limitation exists, the text says so.*
+*Prepared for the v0.1 release, 2026-08. Figures are from the project's internal records; where a number is an estimate or a limitation exists, the text says so. This is a historical account of a system that is being retired: nothing described below — the endpoints, the index, the payment rail — is callable, and the current project is the local command-line tool described in the repository [README](../README.md).*
 
 Sigildex was a hosted trust preflight for agent skills, designed for programmatic callers rather than for people. There was no dashboard, no sign-up, and no console. Every design decision assumed the caller was a program with a limited context window, a retry loop, and no ability to ask a colleague what an ambiguous field meant.
 

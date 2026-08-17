@@ -41,7 +41,11 @@ async function listFiles(root: string): Promise<string[]> {
   return found.sort();
 }
 
-/** Maps a site URL path to the file that must serve it. */
+/**
+ * Maps a site URL path to the file that must serve it. Nested documents such
+ * as `/ci/README.md` map straight through to `ci/README.md`; a fragment or a
+ * query string is not part of the file name.
+ */
 function fileForPath(urlPath: string): string {
   const withoutQuery = urlPath.split(/[?#]/)[0]!;
   if (withoutQuery === "" || withoutQuery === "/") return "index.html";
@@ -81,6 +85,19 @@ describe("served documents are copies, not forks", () => {
     for (const { source, destination } of COPIED_FILES as Array<{ source: string; destination: string }>) {
       const original = await readFile(join(repositoryRoot, source));
       const served = await readFile(join(committedSite, destination));
+      expect(served.equals(original), `${destination} differs from ${source}`).toBe(true);
+    }
+  });
+
+  it("serves the CI guide and the workflow file it tells you to copy", async () => {
+    // Routing an agent to "configure CI" is useless if the two files behind
+    // that intent only exist on the repository host.
+    for (const [source, destination] of [
+      ["docs/ci/README.md", "ci/README.md"],
+      ["docs/ci/approval-check.yml", "ci/approval-check.yml"],
+    ]) {
+      const original = await readFile(join(repositoryRoot, source!));
+      const served = await readFile(join(committedSite, destination!));
       expect(served.equals(original), `${destination} differs from ${source}`).toBe(true);
     }
   });
@@ -308,6 +325,50 @@ describe("retired hosted routes", () => {
     for (const pattern of moved.map((route) => new RegExp(route["src"] as string))) {
       expect(pattern.test("/llms.txt")).toBe(false);
     }
+  });
+});
+
+describe("content-type routes", () => {
+  let config: { routes: Array<Record<string, unknown>> };
+
+  beforeAll(async () => {
+    config = JSON.parse(await readFile(join(committedSite, "vercel.json"), "utf8")) as typeof config;
+  });
+
+  /** The content type the header routes assign to a request path, if any. */
+  function contentTypeFor(requestPath: string): string | undefined {
+    const filesystemIndex = config.routes.findIndex((route) => route["handle"] === "filesystem");
+    for (const route of config.routes.slice(0, filesystemIndex)) {
+      if (new RegExp(route["src"] as string).test(requestPath)) {
+        return (route["headers"] as Record<string, string>)["Content-Type"];
+      }
+    }
+    return undefined;
+  }
+
+  it("labels every served document, at the root and nested", () => {
+    // An agent fetching a raw document gets the wrong type — or a download —
+    // when the header route misses the path it lives at.
+    const expected: Array<[string, string]> = [
+      ["/safe-skill-adoption.md", "text/markdown; charset=utf-8"],
+      ["/SKILL.md", "text/markdown; charset=utf-8"],
+      ["/ci/README.md", "text/markdown; charset=utf-8"],
+      ["/ci/approval-check.yml", "text/yaml; charset=utf-8"],
+      ["/llms.txt", "text/plain; charset=utf-8"],
+      ["/robots.txt", "text/plain; charset=utf-8"],
+      ["/.well-known/security.txt", "text/plain; charset=utf-8"],
+    ];
+    for (const [requestPath, contentType] of expected) {
+      expect(contentTypeFor(requestPath), `wrong content type for ${requestPath}`).toBe(contentType);
+    }
+  });
+
+  it("covers every copied document with a content-type route", async () => {
+    const unlabelled: string[] = [];
+    for (const { destination } of COPIED_FILES as Array<{ destination: string }>) {
+      if (contentTypeFor(`/${destination}`) === undefined) unlabelled.push(destination);
+    }
+    expect(unlabelled).toEqual([]);
   });
 });
 

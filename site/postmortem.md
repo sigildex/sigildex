@@ -1,6 +1,6 @@
 # Postmortem: building and rebuilding an index of agent skills
 
-*Prepared for the v0.1 release, 2026-08. Figures are from the project's internal records; where a number is an estimate or a limitation exists, the text says so.*
+*Prepared for the v0.1 release, 2026-08. Figures are from the project's internal records; where a number is an estimate or a limitation exists, the text says so. This is a historical account of a system that is being retired: nothing described below — the endpoints, the index, the payment rail — is callable, and the current project is the local command-line tool described in the repository [README](../README.md).*
 
 Sigildex was a hosted, agent-first trust preflight for agent skills. Agents called an API to find a candidate skill, inspect it before install, and verify an installed copy by content hash. That hosted system is being retired, and this open-source release closes the project. Below, **Shipped** means it ran in production, **Experiment** means built and measured but never validated by adoption, and **Abandoned** means designed or partly built and never shipped.
 

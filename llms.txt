@@ -38,32 +38,49 @@ Agent Skill and read-only update checks.
 
 ## Supported intents — routing
 
+Each arrow points at the raw document this site serves — plain text, no
+JavaScript, no redirect. The parenthesized link is the same file rendered on
+GitHub, for a human reading over your shoulder.
+
 - **Adopt an already-installed skill** — inventory active skills, copy each to
   review staging, scan and review, record a baseline, verify the installed copy.
-  Installed is not approved. → https://github.com/sigildex/sigildex/blob/main/docs/safe-skill-adoption.md#adopting-an-already-installed-skill
+  Installed is not approved.
+  → https://sigildex.ai/safe-skill-adoption.md#adopting-an-already-installed-skill
+  (rendered on GitHub: https://github.com/sigildex/sigildex/blob/main/docs/safe-skill-adoption.md#adopting-an-already-installed-skill)
 - **Review a candidate skill** — stage in quarantine outside every active skills
   directory, run scanners for evidence, work the manual review checklist, decide.
-  → https://github.com/sigildex/sigildex/blob/main/docs/safe-skill-adoption.md#scanning-and-manual-review
+  → https://sigildex.ai/safe-skill-adoption.md#scanning-and-manual-review
+  (rendered on GitHub: https://github.com/sigildex/sigildex/blob/main/docs/safe-skill-adoption.md#scanning-and-manual-review)
 - **Record an approval** — `sigildex lock` after a human decision; store at
   `.sigildex/approvals/<approval-id>.lock.json`, which is the only filename the
   tool will write for that id. Pass the `--source-*` flags to record an update
   source at the same time.
-  → https://github.com/sigildex/sigildex/blob/main/docs/safe-skill-adoption.md#recording-an-approval
+  → https://sigildex.ai/safe-skill-adoption.md#recording-an-approval
+  (rendered on GitHub: https://github.com/sigildex/sigildex/blob/main/docs/safe-skill-adoption.md#recording-an-approval)
 - **Check for updates** — read-only detection, on demand or on a schedule; report
   CURRENT / UPDATE AVAILABLE / NO UPDATE SOURCE CONFIGURED; never auto-install.
-  → https://github.com/sigildex/sigildex/blob/main/docs/safe-skill-adoption.md#checking-approved-skills-for-updates
+  → https://sigildex.ai/safe-skill-adoption.md#checking-approved-skills-for-updates
+  (rendered on GitHub: https://github.com/sigildex/sigildex/blob/main/docs/safe-skill-adoption.md#checking-approved-skills-for-updates)
 - **Quarantine and compare** — stage the update outside the active installation,
   `sigildex diff` the two trees, re-review, re-approve, reinstall, re-verify.
-  → https://github.com/sigildex/sigildex/blob/main/docs/safe-skill-adoption.md#staging-and-comparing-the-update
+  → https://sigildex.ai/safe-skill-adoption.md#staging-and-comparing-the-update
+  (rendered on GitHub: https://github.com/sigildex/sigildex/blob/main/docs/safe-skill-adoption.md#staging-and-comparing-the-update)
 - **Configure CI** — copy-paste GitHub Actions workflow, the lifecycle state
   matrix it enforces, and the CODEOWNERS + branch-protection settings that make
-  approval a human act. → https://github.com/sigildex/sigildex/blob/main/docs/ci/README.md
+  approval a human act. The workflow file itself is served at
+  https://sigildex.ai/ci/approval-check.yml — copy it into `.github/workflows/`.
+  → https://sigildex.ai/ci/README.md
+  (rendered on GitHub: https://github.com/sigildex/sigildex/blob/main/docs/ci/README.md)
 - **Understand guarantees and limitations** — what a record asserts, and the
-  things it cannot freeze. → https://github.com/sigildex/sigildex/blob/main/docs/safe-skill-adoption.md#what-an-approval-record-cannot-freeze
+  things it cannot freeze.
+  → https://sigildex.ai/safe-skill-adoption.md#what-an-approval-record-cannot-freeze
+  (rendered on GitHub: https://github.com/sigildex/sigildex/blob/main/docs/safe-skill-adoption.md#what-an-approval-record-cannot-freeze)
 - **Understand the security and threat model** — assets, trust boundaries,
   attacker classes, residual risk, and how to report a vulnerability.
-  → https://github.com/sigildex/sigildex/blob/main/docs/threat-model.md
-  → https://github.com/sigildex/sigildex/blob/main/SECURITY.md
+  → https://sigildex.ai/threat-model.md
+  (rendered on GitHub: https://github.com/sigildex/sigildex/blob/main/docs/threat-model.md)
+  → https://sigildex.ai/security.md
+  (rendered on GitHub: https://github.com/sigildex/sigildex/blob/main/SECURITY.md)
 
 ## Commands
 
@@ -105,12 +122,21 @@ clone the repository and build it.
   approval, update checking, quarantine, install verification
 - https://sigildex.ai/schema/approval-record.schema.json — versioned
   approval-record JSON Schema
+- https://sigildex.ai/schema/diff-report.schema.json — versioned diff-report
+  JSON Schema
 - https://sigildex.ai/identity-spec.md — raw identity specification
 - https://sigildex.ai/safe-skill-adoption.md — raw safe-adoption guide
 - https://sigildex.ai/threat-model.md — raw threat model
 - https://sigildex.ai/security.md — raw security policy
+- https://sigildex.ai/ci/README.md — raw CI approval-check guide
+- https://sigildex.ai/ci/approval-check.yml — the copy-paste GitHub Actions
+  workflow file
 - https://sigildex.ai/postmortem.md — raw project postmortem
 - https://sigildex.ai/case-study.md — raw agent-first API case study
+
+Both JSON Schemas declare their `$id` under `https://sigildex.dev/schema/<name>`
+rather than under the host above; `sigildex.dev` mirrors `sigildex.ai` and both
+domains serve the same files, so either URL retrieves the same bytes.
 
 ## Canonical resources
 

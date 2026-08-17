@@ -45,8 +45,11 @@ const COPIES = [
   ["SECURITY.md", "security.md"],
   ["docs/postmortem.md", "postmortem.md"],
   ["docs/case-study.md", "case-study.md"],
+  ["docs/ci/README.md", "ci/README.md"],
+  ["docs/ci/approval-check.yml", "ci/approval-check.yml"],
   // README.md is deliberately not mirrored: the static host does not serve a
-  // root README.md, and llms.txt already points at the repository copy.
+  // root README.md, and llms.txt already points at the repository copy. A
+  // nested ci/README.md is a different path and is served normally.
 ];
 
 /** Hosted paths that no longer exist, answered with 410 and a JSON body. */
@@ -359,8 +362,14 @@ function retiredJson() {
 function vercelJson() {
   const routes = [
     {
+      // `(.*)` spans `/`, so nested documents such as /ci/README.md are covered.
       src: "^/(.*)\\.md$",
       headers: { "Content-Type": "text/markdown; charset=utf-8" },
+      continue: true,
+    },
+    {
+      src: "^/(.*)\\.ya?ml$",
+      headers: { "Content-Type": "text/yaml; charset=utf-8" },
       continue: true,
     },
     {
