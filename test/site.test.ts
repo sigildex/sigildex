@@ -23,11 +23,15 @@ const ORIGIN = "https://sigildex.ai";
 let temporaryRoot: string;
 let freshSite: string;
 
+/** Local-only deploy metadata the builder preserves and the tests ignore. */
+const LOCAL_ONLY = new Set([".vercel", ".gitignore"]);
+
 /** Every file under `root`, as sorted POSIX-style paths relative to it. */
 async function listFiles(root: string): Promise<string[]> {
   const found: string[] = [];
   const walk = async (directory: string): Promise<void> => {
     for (const entry of await readdir(directory, { withFileTypes: true })) {
+      if (directory === root && LOCAL_ONLY.has(entry.name)) continue;
       const absolute = join(directory, entry.name);
       if (entry.isDirectory()) await walk(absolute);
       else found.push(relative(root, absolute).split(sep).join("/"));

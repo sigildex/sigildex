@@ -395,13 +395,20 @@ async function emit(outDir, relativePath, contents) {
   await writeFile(target, contents);
 }
 
+/** Entries in `outDir` the builder never touches: local deploy metadata. */
+const PRESERVED = new Set([".vercel", ".gitignore"]);
+
 /**
- * Builds the whole site into `outDir`, replacing whatever was there.
- * Returns the site-relative paths written, sorted.
+ * Builds the whole site into `outDir`, replacing everything there except the
+ * preserved local-only entries above. Returns the site-relative paths written,
+ * sorted.
  */
 export async function buildSite(outDir = join(repositoryRoot, "site")) {
-  await rm(outDir, { recursive: true, force: true });
   await mkdir(outDir, { recursive: true });
+  for (const entry of await readdir(outDir)) {
+    if (PRESERVED.has(entry)) continue;
+    await rm(join(outDir, entry), { recursive: true, force: true });
+  }
 
   const written = [];
   const copies = [...COPIES];
