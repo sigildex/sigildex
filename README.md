@@ -242,4 +242,6 @@ nobody noticed.
 - [docs/ci](docs/ci) — a copy-paste CI workflow that keeps one skill and its approval record consistent, with an explicit account of what it cannot prove.
 - [skills/sigildex/SKILL.md](skills/sigildex/SKILL.md) — the Sigildex Agent Skill: drop it into your agent's active skills directory, for example `.claude/skills/`, to run this workflow with an agent.
 - [llms.txt](llms.txt) — a compact, machine-readable summary of the tool, its limitations, and where to route.
+- [docs/postmortem.md](docs/postmortem.md) — what went wrong building and rebuilding the hosted index this project started as, and what was kept.
+- [docs/case-study.md](docs/case-study.md) — a technical account of the hosted API that was designed for agents rather than people.
 - [schema/](schema) — JSON Schema for the approval record and the diff report. These are *structural subsets* of the specification, published so tools can read the shape of a document: their string limits count code points where the specification counts UTF-8 bytes, and they cannot express the Unicode-assignment rule on paths, manifest ordering, or the requirement that `root_digest` agree with its own manifest. Records exist that the schema accepts and `sigildex check` rejects. `sigildex check` is the authority on whether a record is valid; each schema says so in its own `description` and `$comment`.

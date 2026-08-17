@@ -109,6 +109,8 @@ clone the repository and build it.
 - https://sigildex.ai/safe-skill-adoption.md — raw safe-adoption guide
 - https://sigildex.ai/threat-model.md — raw threat model
 - https://sigildex.ai/security.md — raw security policy
+- https://sigildex.ai/postmortem.md — raw project postmortem
+- https://sigildex.ai/case-study.md — raw agent-first API case study
 
 ## Canonical resources
 
@@ -130,6 +132,10 @@ clone the repository and build it.
 - https://github.com/sigildex/sigildex/tree/main/examples/version-drift —
   runnable lifecycle walkthrough, exit code asserted at every step
 - https://github.com/sigildex/sigildex/blob/main/schema/approval-record.schema.json — schema
+- https://github.com/sigildex/sigildex/blob/main/docs/postmortem.md — postmortem
+  of the hosted index this project started as
+- https://github.com/sigildex/sigildex/blob/main/docs/case-study.md — case study
+  of the hosted agent-first API
 - https://github.com/sigildex/sigildex/blob/main/SECURITY.md — security policy
 - https://github.com/sigildex/sigildex/releases — releases
 
