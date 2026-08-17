@@ -1,6 +1,6 @@
 # Case study: designing an API for agent-first, programmatic use
 
-*Written at the v0.1 release, 2026-08. Figures are from the project's internal records; where a number is an estimate or a limitation exists, the text says so.*
+*Prepared for the v0.1 release, 2026-08. Figures are from the project's internal records; where a number is an estimate or a limitation exists, the text says so.*
 
 Sigildex was a hosted trust preflight for agent skills, designed for programmatic callers rather than for people. There was no dashboard, no sign-up, and no console. Every design decision assumed the caller was a program with a limited context window, a retry loop, and no ability to ask a colleague what an ambiguous field meant.
 
@@ -48,7 +48,7 @@ Honesty under degradation is the transferable idea here. When we froze the crawl
 
 Those enums earned their keep at the end: the corpus stopped growing in mid-July 2026, and the freshness states are what made that visible on the wire rather than silently wrong.
 
-**Abandoned:** a successor trust-wire specification was written and locked but never implemented as a whole. One of its three parts shipped separately as a serving-side fix; the rest was gated on a corpus rebuild that never finished.
+**Abandoned:** a successor trust-wire specification was written and agreed but never implemented as a whole. One of its three parts shipped separately as a serving-side fix; the rest was gated on a corpus rebuild that never finished.
 
 ## MCP and CLI integration — Shipped
 
@@ -110,13 +110,13 @@ The hosted verification endpoint needed only a content hash to answer its questi
 
 Ranking genuinely needed the index — semantic relevance combined with community signals, freshness decay, and publisher trust. None of that is computable on one developer's laptop.
 
-Quota was the state that hurt. Moving shared quota state from process memory into the database was correct — in-memory quota across serverless instances is a real correctness bug, not a theoretical one — and it cost about 500 milliseconds at the 95th percentile against a budget of 100. That failed our own latency gate. We recorded it as a failure and a signed re-baseline rather than reinterpreting the gate, choosing correctness over latency before any market test.
+Quota was the state that hurt. Moving shared quota state from process memory into the database was correct — in-memory quota across serverless instances is a real correctness bug, not a theoretical one — and it cost about 500 milliseconds at the 95th percentile against a budget of 100. That failed our own latency gate. We recorded it as a failure and an explicit, written re-baseline rather than reinterpreting the gate, choosing correctness over latency before any market test.
 
 The probe we ran beforehand had looked fine, because it measured database compute rather than the network hop where the cost actually lived. Probes measure what you point them at.
 
 Wallet-as-principal is the interesting middle: per-caller quota with no email, no password, and no self-serve account object behind it.
 
-One strategic note we owe the reader, because it is not only an architecture question. Our own adversarial review located the durable business position in the hosted longitudinal record — the thing only a service that watches over time can produce — and described local point-in-time work as crowded and increasingly free. Choosing the stateless half is a defensible engineering decision and a deliberate commercial retreat. Both are true at once.
+One strategic note we owe the reader, because it is not only an architecture question. Our own most critical review located the durable business position in the hosted longitudinal record — the thing only a service that watches over time can produce — and described local point-in-time work as crowded and increasingly free. Choosing the stateless half is a defensible engineering decision and a deliberate commercial retreat. Both are true at once.
 
 So the open-source release keeps only the stateless half, and that is what **ships in v0.1**: three local commands over local paths, with no hosted index and no hosted component of any kind. The hosted estate itself is scheduled for shutdown. Sigildex does not replace discovery, security scanning, or human review. It connects them into a durable workflow by recording exactly what was approved and detecting when that artifact changes.
 
