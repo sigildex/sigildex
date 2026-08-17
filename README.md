@@ -6,7 +6,7 @@ Sigildex is a local, deterministic command-line tool for AI agent skills. `sigil
 
 ## Status
 
-v0.1 in preparation — not yet published. It will be published to npm as `sigildex@0.1.0`; until then, build it from this repository. It requires Node.js 20 or later. The identity specification ([docs/identity-spec.md](docs/identity-spec.md)) is the normative contract; implementation follows it.
+v0.1.0 is published to npm as `sigildex` (`npm install -g sigildex@0.1.0`). It requires Node.js 20 or later. The identity specification ([docs/identity-spec.md](docs/identity-spec.md)) is the normative contract; implementation follows it.
 
 ## The workflow
 
@@ -41,7 +41,7 @@ freeze, is in [docs/safe-skill-adoption.md](docs/safe-skill-adoption.md).
 Requires Node.js 20 or later, on macOS or Linux. Windows is out of scope in
 v0.1; run under WSL or on a Linux or macOS host.
 
-This path uses the repository's own example trees, so it runs from a clone:
+This path uses the repository's own example trees, which ship in the repository and not in the npm package, so it runs from a clone:
 
 ```sh
 git clone https://github.com/sigildex/sigildex
@@ -50,10 +50,11 @@ npm ci && npm run build
 cd examples/version-drift
 ```
 
-Because v0.1 is not on npm yet, the commands below call `npx sigildex`, which
-inside the clone runs the build you just made. Once the package is published,
-`npm install -g sigildex` gives you a plain `sigildex` command and every command
-below is the same without the `npx` prefix.
+The commands below call `npx sigildex`, which inside the clone runs the build
+you just made. If you would rather use the published package,
+`npm install -g sigildex@0.1.0` gives you a plain `sigildex` command and every
+command below is the same without the `npx` prefix; the clone is still where
+the example trees live.
 
 **Record what you reviewed.** `skill-v1` stands in for a candidate you have
 staged in quarantine and read.

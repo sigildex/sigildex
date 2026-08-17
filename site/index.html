@@ -205,7 +205,7 @@ $ echo $?
 <section id="status">
   <h2>Where this stands</h2>
   <p>Sigildex v0.1 is open source and local-first. It runs on macOS and Linux, reads only the paths you give it, and makes no network calls.</p>
-  <p>v0.1 is not published yet; it will be published to npm as <code>sigildex</code>, and until then you build it from the <a href="https://github.com/sigildex/sigildex/blob/main/README.md">repository</a>.</p>
+  <p>v0.1.0 is published to npm as <code>sigildex</code> (<code>npm install -g sigildex@0.1.0</code>); the source, the example trees, and the documentation are in the <a href="https://github.com/sigildex/sigildex/blob/main/README.md">repository</a>.</p>
   <p>There is no hosted index, no discovery API, and no publisher-monitoring service. Update detection is read-only and something you or your CI runs on purpose — never automatic.</p>
   <p>Sigildex does not certify that a skill is safe, and it does not verify where a skill came from. An approval record is a review snapshot: it records the exact bytes you designated as approved, and tells you when they change. Pair it with security scanning and human review appropriate to your environment.</p>
   <p>It also does not police your approvals directory. <code>lock</code> refuses to write a record under any name but <code>&lt;approval-id&gt;.lock.json</code>, and <code>check</code> compares one artifact against one record — but nothing in v0.1 scans a folder of approvals for duplicate ids, duplicate artifact paths, or records left behind without their artifact. Code owners and review cover that.</p>

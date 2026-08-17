@@ -111,9 +111,9 @@ report from `diff`. These are three different shapes — branch on the exit code
 before parsing. The drift report has no `schema_version` field; the diff report
 does.
 
-Install: requires Node.js 20 or later. v0.1 is not published yet; it will be
-published to npm as `sigildex@0.1.0` (`npm install -g sigildex`). Until then,
-clone the repository and build it.
+Install: requires Node.js 20 or later. `npm install -g sigildex@0.1.0`
+(published to npm as `sigildex`). The example trees used by the quickstart live
+in the repository, not in the package; clone it to run them.
 
 ## Agent files (fetchable, no JavaScript required)
 

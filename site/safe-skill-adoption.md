@@ -8,11 +8,11 @@ deliberately, and noticing when what you approved changes.
 > and detecting when that artifact changes.
 
 **Before you start.** Every `sigildex` command below needs the tool on your
-path, and Node.js 20 or later. v0.1 is not published yet; when it is, it will
-install from npm as `sigildex` (`npm install -g sigildex`). Until then, build it
-from the repository — the quickstart in
-[README.md](../README.md#five-minutes) clones, builds, and runs the whole
-lifecycle against the bundled example trees in about five minutes.
+path, and Node.js 20 or later. v0.1 installs from npm as `sigildex`
+(`npm install -g sigildex@0.1.0`). The quickstart in
+[README.md](../README.md#five-minutes) clones the repository (which holds the
+example trees), builds, and runs the whole lifecycle against them in about five
+minutes.
 
 ## Overview and trust model
 
