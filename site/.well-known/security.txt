@@ -1,0 +1,5 @@
+Contact: https://github.com/sigildex/sigildex/security/advisories/new
+Policy: https://github.com/sigildex/sigildex/blob/main/SECURITY.md
+Canonical: https://sigildex.ai/.well-known/security.txt
+Expires: 2027-08-16T00:00:00.000Z
+Preferred-Languages: en

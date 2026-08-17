@@ -33,6 +33,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "build:site": "node scripts/build-site.mjs",
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit",
     "verify:example": "node examples/version-drift/verify-example.mjs"

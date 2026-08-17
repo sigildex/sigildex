@@ -1,0 +1,6 @@
+{
+  "status": 410,
+  "message": "This hosted endpoint has been retired. Sigildex is now an open-source local tool.",
+  "see": "https://sigildex.ai/llms.txt",
+  "repository": "https://github.com/sigildex/sigildex"
+}

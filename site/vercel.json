@@ -1,0 +1,173 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "routes": [
+    {
+      "src": "^/(.*)\\.md$",
+      "headers": {
+        "Content-Type": "text/markdown; charset=utf-8"
+      },
+      "continue": true
+    },
+    {
+      "src": "^/(llms\\.txt|robots\\.txt|\\.well-known/security\\.txt)$",
+      "headers": {
+        "Content-Type": "text/plain; charset=utf-8"
+      },
+      "continue": true
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "^/discover/?$",
+      "dest": "/retired.json",
+      "status": 410,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "X-Robots-Tag": "noindex"
+      }
+    },
+    {
+      "src": "^/inspect/?$",
+      "dest": "/retired.json",
+      "status": 410,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "X-Robots-Tag": "noindex"
+      }
+    },
+    {
+      "src": "^/verify/?$",
+      "dest": "/retired.json",
+      "status": 410,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "X-Robots-Tag": "noindex"
+      }
+    },
+    {
+      "src": "^/mcp/?$",
+      "dest": "/retired.json",
+      "status": 410,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "X-Robots-Tag": "noindex"
+      }
+    },
+    {
+      "src": "^/health/?$",
+      "dest": "/retired.json",
+      "status": 410,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "X-Robots-Tag": "noindex"
+      }
+    },
+    {
+      "src": "^/prices/?$",
+      "dest": "/retired.json",
+      "status": 410,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "X-Robots-Tag": "noindex"
+      }
+    },
+    {
+      "src": "^/openapi\\.json$",
+      "dest": "/retired.json",
+      "status": 410,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "X-Robots-Tag": "noindex"
+      }
+    },
+    {
+      "src": "^/llms-full\\.txt$",
+      "dest": "/retired.json",
+      "status": 410,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "X-Robots-Tag": "noindex"
+      }
+    },
+    {
+      "src": "^/\\.well-known/x402\\.json$",
+      "dest": "/retired.json",
+      "status": 410,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "X-Robots-Tag": "noindex"
+      }
+    },
+    {
+      "src": "^/\\.well-known/mcp\\.json$",
+      "dest": "/retired.json",
+      "status": 410,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "X-Robots-Tag": "noindex"
+      }
+    },
+    {
+      "src": "^/\\.well-known/agent-pricing\\.json$",
+      "dest": "/retired.json",
+      "status": 410,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "X-Robots-Tag": "noindex"
+      }
+    },
+    {
+      "src": "^/api(/.*)?$",
+      "dest": "/retired.json",
+      "status": 410,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "X-Robots-Tag": "noindex"
+      }
+    },
+    {
+      "src": "^/v1(/.*)?$",
+      "dest": "/retired.json",
+      "status": 410,
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "X-Robots-Tag": "noindex"
+      }
+    },
+    {
+      "src": "^/about/?$",
+      "status": 308,
+      "headers": {
+        "Location": "/"
+      }
+    },
+    {
+      "src": "^/docs(/.*)?$",
+      "status": 308,
+      "headers": {
+        "Location": "/"
+      }
+    },
+    {
+      "src": "^/legal(/.*)?$",
+      "status": 308,
+      "headers": {
+        "Location": "/"
+      }
+    }
+  ]
+}

@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sigildex — know what changed in an Agent Skill</title>
+<meta name="description" content="Sigildex is an open-source, local workflow for recording the exact Agent Skill you reviewed, detecting artifact drift, and focusing human or agent review on the files and capabilities that changed.">
+<meta name="color-scheme" content="light dark">
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #16181d;
+  --muted: #5b6270;
+  --rule: #e2e5ea;
+  --surface: #f6f7f9;
+  --accent: #1a4fd6;
+  --code-bg: #14161b;
+  --code-fg: #e6e8ec;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #101216;
+    --fg: #e7e9ee;
+    --muted: #9aa2b1;
+    --rule: #262a32;
+    --surface: #181b21;
+    --accent: #8fb0ff;
+    --code-bg: #06070a;
+    --code-fg: #dfe2e8;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  padding: 0 1.25rem 5rem;
+  background: var(--bg);
+  color: var(--fg);
+  font: 16px/1.65 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+main { max-width: 46rem; margin: 0 auto; }
+header { padding: 4rem 0 0; }
+h1 { font-size: clamp(1.7rem, 5vw, 2.5rem); line-height: 1.2; margin: 0 0 1rem; letter-spacing: -0.02em; }
+h2 { font-size: 1.15rem; margin: 3.25rem 0 0.75rem; letter-spacing: -0.01em; }
+p { margin: 0 0 1rem; }
+a { color: var(--accent); }
+.lead { font-size: 1.1rem; color: var(--fg); }
+.muted { color: var(--muted); }
+.positioning {
+  margin: 1.5rem 0 0;
+  padding: 1rem 1.15rem;
+  background: var(--surface);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 6px 6px 0;
+}
+.workflow {
+  margin: 0;
+  padding: 0.9rem 1.15rem;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+pre {
+  margin: 0;
+  padding: 1rem 1.15rem;
+  background: var(--code-bg);
+  color: var(--code-fg);
+  border-radius: 6px;
+  overflow-x: auto;
+  font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.92em; }
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 36rem; font-size: 0.92rem; }
+th, td { text-align: left; vertical-align: top; padding: 0.6rem 0.7rem; border-bottom: 1px solid var(--rule); }
+th { font-weight: 600; }
+tr.here { background: var(--surface); }
+ul { margin: 0 0 1rem; padding-left: 1.25rem; }
+li { margin: 0.3rem 0; }
+footer { margin-top: 3.5rem; padding-top: 1.25rem; border-top: 1px solid var(--rule); font-size: 0.9rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <h1>Know what changed in an Agent Skill before you trust the update.</h1>
+  <p class="lead">Sigildex is an open-source, local workflow for recording the exact Agent Skill you reviewed, detecting artifact drift, and focusing human or agent review on the files and capabilities that changed. It runs without an API, account, database, or LLM. Sigildex complements security scanners; it does not certify that a skill is safe.</p>
+</header>
+
+<section id="positioning">
+  <p class="positioning">Sigildex does not replace discovery, security scanning, or human review. It connects them into a durable workflow by recording exactly what was approved and detecting when that artifact changes.</p>
+</section>
+
+<section id="workflow">
+  <h2>The workflow</h2>
+  <p class="workflow">Discover → stage → inspect/scan → human review → record approval → install &amp; verify → detect update → quarantine → diff → re-approve</p>
+</section>
+
+<section id="demo">
+  <h2>You approved a skill. Then it changed.</h2>
+  <pre>$ sigildex lock skill-v1 --approval-id log-summarizer --out log-summarizer.lock.json
+Locked skill-v1
+  approval id:            log-summarizer
+  root digest:            sha256:d445576462862500bd9537c93fc2390802d97bf3df13879a9b83cc21e04890ad
+  files:                  2
+  frontmatter:            ok
+    name:                 log-summarizer
+    description:          Summarize a plain-text application log into a short incident report — error counts, the first and last timestamp seen, and the most frequent messages. Use when …
+  written to:             log-summarizer.lock.json
+This records byte identity only. It does not attest safety, provenance, or future content.
+$ echo $?
+0
+
+$ sigildex check skill-v1 --against log-summarizer.lock.json
+Match: the artifact matches approval record log-summarizer.
+  root digest:            sha256:d445576462862500bd9537c93fc2390802d97bf3df13879a9b83cc21e04890ad
+  files:                  2
+This records byte identity only. It does not attest safety, provenance, or future content.
+$ echo $?
+0
+
+$ sigildex check skill-v2 --against log-summarizer.lock.json
+Drift: the artifact no longer matches the approval record (1 added, 0 removed, 1 modified, 0 mode-changed).
+  approved root digest:   sha256:d445576462862500bd9537c93fc2390802d97bf3df13879a9b83cc21e04890ad
+  actual root digest:     sha256:0b0bec0d4e4435beed62b983c530f4f8249e7b1af01d31fbb8be1989d94cf1c6
+
+  + scripts/summarize.sh (script)
+  ~ SKILL.md (instructions)
+
+Review the changes and re-lock only after approving them.
+$ echo $?
+2</pre>
+  <p class="muted" style="margin-top:1rem">An update added an executable script where the approved version had none, and rewrote the instructions to call it. <code>sigildex diff</code> shows exactly what changed. A human decides whether to approve it.</p>
+</section>
+
+<section id="ecosystem">
+  <h2>Where Sigildex sits</h2>
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>Stage</th><th>What it does</th><th>Examples</th><th>Sigildex</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Discovery</td>
+        <td>Find candidate skills</td>
+        <td>GitHub CLI <code>gh skill</code>, Vercel Skills CLI, publisher catalogs</td>
+        <td>Not this</td>
+      </tr>
+      <tr>
+        <td>Scanning</td>
+        <td>Produce evidence about a candidate — patterns, injection risk, secrets</td>
+        <td>NVIDIA SkillSpector, Cisco AI Defense Skill Scanner, Snyk Agent Scan</td>
+        <td>Not this</td>
+      </tr>
+      <tr>
+        <td>Human review</td>
+        <td>Decide whether the skill belongs in your environment</td>
+        <td>You</td>
+        <td>Not this</td>
+      </tr>
+      <tr class="here">
+        <td><strong>Approval record</strong></td>
+        <td><strong>Record exactly what was approved, and detect when it changes</strong></td>
+        <td></td>
+        <td><strong>This</strong></td>
+      </tr>
+      <tr>
+        <td>Installation &amp; updates</td>
+        <td>Put skills on disk; report when upstream moves</td>
+        <td>Package managers and skill installers</td>
+        <td>Not this</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="muted" style="margin-top:1rem">Each stage is someone else's job, and they are all better at it than a single tool would be. The gap is between them: what you approved is no longer what is installed, and nobody noticed. That is the gap Sigildex closes.</p>
+</section>
+
+<section id="agent">
+  <h2>Use it with your agent</h2>
+  <p>Sigildex ships an Agent Skill that runs the whole loop under hard boundaries: it stages candidates in quarantine, offers scanner commands, presents the review checklist, and summarizes what it finds — then stops and asks you. It never infers approval from a clean scan, never installs without your explicit approval, and refuses to activate an artifact that does not match its approval baseline. These controls reduce risk; they are not a security boundary.</p>
+  <ul>
+    <li><a href="https://sigildex.ai/SKILL.md">Agent Skill</a> — drop it into your agent's active skills directory.</li>
+    <li><a href="https://sigildex.ai/llms.txt">Machine-readable front door</a> — point an agent at this file and it can navigate the whole project.</li>
+    <li><a href="https://github.com/sigildex/sigildex/blob/main/skills/sigildex/SKILL.md">The same Agent Skill in the repository</a> — <code>skills/sigildex/SKILL.md</code>.</li>
+  </ul>
+</section>
+
+<section id="links">
+  <h2>Links</h2>
+  <ul>
+    <li><a href="https://github.com/sigildex/sigildex">Repository</a></li>
+    <li><a href="https://github.com/sigildex/sigildex/blob/main/README.md">README quickstart</a></li>
+    <li><a href="https://github.com/sigildex/sigildex/blob/main/docs/safe-skill-adoption.md">Safe skill adoption guide</a></li>
+    <li><a href="https://github.com/sigildex/sigildex/blob/main/docs/identity-spec.md">Identity specification</a></li>
+    <li><a href="https://github.com/sigildex/sigildex/blob/main/skills/sigildex/SKILL.md">Agent Skill</a></li>
+    <li><a href="https://github.com/sigildex/sigildex/blob/main/docs/case-study.md">Architecture case study: building an agent-first system</a></li>
+    <li><a href="https://github.com/sigildex/sigildex/blob/main/docs/postmortem.md">Postmortem: what the crawl and rebuild actually cost</a></li>
+  </ul>
+</section>
+
+<section id="status">
+  <h2>Where this stands</h2>
+  <p>Sigildex v0.1 is open source and local-first. It runs on macOS and Linux, reads only the paths you give it, and makes no network calls.</p>
+  <p>v0.1 is not published yet; it will be published to npm as <code>sigildex</code>, and until then you build it from the <a href="https://github.com/sigildex/sigildex/blob/main/README.md">repository</a>.</p>
+  <p>There is no hosted index, no discovery API, and no publisher-monitoring service. Update detection is read-only and something you or your CI runs on purpose — never automatic.</p>
+  <p>Sigildex does not certify that a skill is safe, and it does not verify where a skill came from. An approval record is a review snapshot: it records the exact bytes you designated as approved, and tells you when they change. Pair it with security scanning and human review appropriate to your environment.</p>
+  <p>It also does not police your approvals directory. <code>lock</code> refuses to write a record under any name but <code>&lt;approval-id&gt;.lock.json</code>, and <code>check</code> compares one artifact against one record — but nothing in v0.1 scans a folder of approvals for duplicate ids, duplicate artifact paths, or records left behind without their artifact. Code owners and review cover that.</p>
+</section>
+
+<footer>
+  The repository is the canonical source of truth. This page is a front door, generated from the repository's own files.
+</footer>
+
+</main>
+</body>
+</html>
