@@ -24,8 +24,8 @@ identity computation are unchanged; a record written by 0.1.0 verifies with
 
 - README, website, `llms.txt`, the Agent Skill, and the adoption guide
   rewritten: shorter, each fact stated once at its home, limits in one section
-  per surface. The two loops — adopt and update — replace the ten-stage
-  walkthrough everywhere but the guide.
+  per surface. The workflow reads as two loops — adopt and update — with the
+  ten-stage detail in the guide.
 - The Agent Skill states the rules an agent meets first: install and PATH
   preflight, the `--artifact-path` rule, the `--approval-id` default, and how
   `gh skill update` relates to a record's `declared_source`.
