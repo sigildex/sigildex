@@ -13,7 +13,7 @@ installed bytes stop matching it.
 
 Sigildex is a small, deterministic CLI that fills that gap. It reads only the
 paths you give it: no network calls, no telemetry, no scoring, no hosted service,
-no automatic updates. It records bytes, not trust — see
+no automatic updates. It records bytes, not trust: see
 [Trust boundary](#trust-boundary). Built for teams that commit third-party
 skills to Git and review them in pull requests; individual developers and agents
 run the same commands.
@@ -26,9 +26,9 @@ run the same commands.
 
 Exit `1` (tool, input, filesystem or walk error) and `3` (unsupported or invalid
 record) mean no verdict was produced; neither is ever reported as a match. All
-flags — including `--artifact-path`, required when the reviewed copy is outside
-the current directory (otherwise `lock` exits `1`) — are in the
-[guide](docs/safe-skill-adoption.md#recording-an-approval).
+flags are in the [guide](docs/safe-skill-adoption.md#recording-an-approval),
+including `--artifact-path`, required when the reviewed copy is outside the
+current directory (otherwise `lock` exits `1`).
 
 ## Install
 
@@ -71,10 +71,10 @@ approval record (0 added, 0 removed, 1 modified, 0 mode-changed).` and lists
 `~ SKILL.md (instructions)`. Exit codes `0`, `0`, `2`. (The approval id defaults
 to the directory name, hence `approval record demo-skill` in the output.)
 
-A full lifecycle — approve v1, catch v2 drifting, `diff` it, re-approve, roll
-back, remove — with every exit code asserted by a runnable script lives in
-[examples/version-drift](examples/version-drift) (clone, `npm ci && npm run
-build`, `cd examples/version-drift`).
+The full lifecycle lives in [examples/version-drift](examples/version-drift):
+approve v1, catch v2 drifting, `diff` it, re-approve, roll back, remove, with
+every exit code asserted by a runnable script (clone, `npm ci && npm run build`,
+`cd examples/version-drift`).
 
 ## How it fits
 
@@ -83,7 +83,7 @@ in **bold**; the rest use tools you already have.
 
 **Adopt:** discover → quarantine → scan → human review → **`lock`** → install → **`check`**
 
-**Update:** detect update (your installer, read-only — e.g. `gh skill update --dry-run`; not Sigildex) → quarantine it → **`diff`** → human review → **`lock`** again → install → **`check`**
+**Update:** detect update (your installer, read-only, e.g. `gh skill update --dry-run`; not Sigildex) → quarantine it → **`diff`** → human review → **`lock`** again → install → **`check`**
 
 ```mermaid
 flowchart LR
@@ -102,10 +102,10 @@ flowchart LR
 ```
 
 What Sigildex adds is the record: what a human actually approved, stored beside
-the code, reviewed in the pull request, and checked again at install time. Full
-guide — quarantine, scanners, the review checklist, adopting already-installed
-skills, removal, emergency revocation, what a record cannot freeze:
-[docs/safe-skill-adoption.md](docs/safe-skill-adoption.md).
+the code, reviewed in the pull request, and checked again at install time. The
+full guide covers quarantine, scanners, the review checklist, adopting
+already-installed skills, removal, emergency revocation, and what a record cannot
+freeze: [docs/safe-skill-adoption.md](docs/safe-skill-adoption.md).
 
 ## Why not just…
 
@@ -116,7 +116,7 @@ skills, removal, emergency revocation, what a record cannot freeze:
   reports drift per file, with its class and executable bit, and `diff`
   explains the change in review terms.
 - **A signature or attestation?** It says who published the artifact and how
-  it was built — not that those bytes are the ones your team read and
+  it was built, not that those bytes are the ones your team read and
   approved. The two compose: origin from the attestation, approved bytes from
   the record.
 - **A scanner?** [NVIDIA SkillSpector](https://github.com/NVIDIA/SkillSpector),
@@ -137,14 +137,14 @@ installed still what a human approved?
 
 > Sigildex records artifact identity and explains changes. It does not certify that a skill is safe, and it does not verify where a skill came from. Pair it with security scanning and human review appropriate to your environment.
 
-- **`check` proves one thing.** The artifact byte-matched the record — same
-  paths, contents, executable bits — during the measurement window. It says
+- **`check` proves one thing.** The artifact byte-matched the record (same
+  paths, contents, executable bits) during the measurement window. It says
   nothing about what a harness loads afterwards, what a dependency resolves to,
   or what a remote instruction returns at runtime.
 - **A record is a review snapshot.** It records what a human designated as
   approved; the tool never knows whether a review happened. Trust comes from
-  where records live — a protected branch, code owners, a required check — and
-  those are settings, not cryptography: an administrator can bypass them.
+  where records live: a protected branch, code owners, a required check. Those
+  are settings, not cryptography, and an administrator can bypass them.
 - **`declared_source` is a note, not evidence.** Set with `lock`'s `--source-*`
   flags, it is user-supplied, unverified, and outside the identity digest; only
   an update check you run reads it.
@@ -162,16 +162,16 @@ Assets, attacker classes, and what is out of scope:
 
 ## Docs
 
-- [docs/identity-spec.md](docs/identity-spec.md) — the normative identity and approval-record specification.
-- [docs/safe-skill-adoption.md](docs/safe-skill-adoption.md) — the stage-by-stage adoption workflow, with quarantine and CI.
-- [docs/threat-model.md](docs/threat-model.md) — assets, trust boundaries, attacker classes, residual risk.
-- [docs/ci](docs/ci) — a workflow that fails a pull request when a skill and its record disagree.
-- [docs/code-map.md](docs/code-map.md) — each documented claim, the code that implements it, the tests that cover it.
-- [skills/sigildex/SKILL.md](skills/sigildex/SKILL.md) — the Sigildex Agent Skill; drop it into your agent's skills directory.
-- [llms.txt](llms.txt) — routing and limits for agents.
-- [schema/](schema) — JSON Schema for the approval record and diff report. Structural subsets of the spec: `sigildex check` is the authority on validity. Each `$id` resolves under `https://sigildex.dev/schema/`, a mirror serving the same bytes as sigildex.ai.
-- [CONTRIBUTING.md](CONTRIBUTING.md) — scope, compatibility policy for 0.1.x, what the release accepts.
-- [SECURITY.md](SECURITY.md) — how to report a vulnerability.
-- [site/](site) — the website, generated from these files by `npm run build:site`.
+- [docs/identity-spec.md](docs/identity-spec.md): the normative identity and approval-record specification.
+- [docs/safe-skill-adoption.md](docs/safe-skill-adoption.md): the stage-by-stage adoption workflow, with quarantine and CI.
+- [docs/threat-model.md](docs/threat-model.md): assets, trust boundaries, attacker classes, residual risk.
+- [docs/ci](docs/ci): a workflow that fails a pull request when a skill and its record disagree.
+- [docs/code-map.md](docs/code-map.md): each documented claim, the code that implements it, the tests that cover it.
+- [skills/sigildex/SKILL.md](skills/sigildex/SKILL.md): the Sigildex Agent Skill; drop it into your agent's skills directory.
+- [llms.txt](llms.txt): routing and limits for agents.
+- [schema/](schema): JSON Schema for the approval record and diff report. Structural subsets of the spec: `sigildex check` is the authority on validity. Each `$id` resolves under `https://sigildex.dev/schema/`, a mirror serving the same bytes as sigildex.ai.
+- [CONTRIBUTING.md](CONTRIBUTING.md): scope, compatibility policy for 0.1.x, what the release accepts.
+- [SECURITY.md](SECURITY.md): how to report a vulnerability.
+- [site/](site): the website, generated from these files by `npm run build:site`.
 
-History: [docs/postmortem.md](docs/postmortem.md) — why the earlier hosted index was retired, and what it cost · [docs/case-study.md](docs/case-study.md) — the hosted API designed for agents rather than people.
+History: [docs/postmortem.md](docs/postmortem.md): why the hosted index was built and why this ships without one · [docs/case-study.md](docs/case-study.md): designing an API for agents first.
