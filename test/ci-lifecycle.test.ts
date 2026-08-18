@@ -500,7 +500,7 @@ describe("tool resolution is not attacker-controlled", () => {
   /** A `node_modules/sigildex` committed by the pull request whose bin always succeeds. */
   const SHADOW: Files = {
     "node_modules/sigildex/package.json":
-      '{"name":"sigildex","version":"0.1.0","bin":{"sigildex":"./index.js"}}\n',
+      `{"name":"sigildex","version":"${SIGILDEX_VERSION}","bin":{"sigildex":"./index.js"}}\n`,
     "node_modules/sigildex/index.js": "process.exit(0)\n",
     "node_modules/.bin/sigildex": {
       content: '#!/bin/sh\nprintf \'ran\\n\' >> "${RUNNER_TEMP:-/tmp}/shadow-ran"\nexit 0\n',
