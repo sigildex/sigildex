@@ -9,7 +9,9 @@ deliberately, and noticing when what you approved changes.
 
 **Before you start.** Every `sigildex` command below needs the tool on your
 path, and Node.js 20 or later. v0.1 installs from npm as `sigildex`
-(`npm install -g sigildex@0.1.0`). The quickstart in
+(`npm install -g sigildex@0.1.0`). Confirm it with `sigildex --version`: a
+`command not found` and exit `127` means the tool is not on PATH, which is a
+shell error rather than a Sigildex verdict. The quickstart in
 [README.md](../README.md#five-minutes) clones the repository (which holds the
 example trees), builds, and runs the whole lifecycle against them in about five
 minutes.
@@ -20,19 +22,22 @@ An agent skill is instructions — and often scripts — that you hand to a syst
 with your tools, your credentials, and your filesystem. Adopting one is a trust
 decision. This guide is the workflow around that decision.
 
-The workflow has eight stages. Sigildex implements one of them and connects the
-rest:
+The workflow has ten stages. Sigildex's commands do the work in four of them;
+the rest it documents and connects:
 
 1. **Discover** a candidate skill.
 2. **Stage** it in quarantine, outside any directory an agent loads.
-3. **Scan and review** it — automated scanners for evidence, a human for
-   judgement.
-4. **Record an approval baseline** — `sigildex lock`.
-5. **Install and verify** — `sigildex check` the copy that will actually run.
-6. **Detect upstream changes** with read-only mechanisms.
-7. **Stage the update** in quarantine; the active installation is untouched.
-8. **Compare and re-approve** — `sigildex diff`, then a human decision, then a
-   new baseline.
+3. **Inspect and scan** it — automated scanners produce evidence, never a
+   certification.
+4. **Human review** — a person reads the skill and decides.
+5. **Record an approval baseline** — `sigildex lock`.
+6. **Install and verify** — `sigildex check` the copy that will actually run.
+7. **Detect upstream changes** with read-only mechanisms, on demand or on a
+   schedule you own. Never automatic.
+8. **Quarantine the update**; the active installation is untouched.
+9. **Diff** the two trees — `sigildex diff`, per file, by class.
+10. **Re-approve** — a human reads the diff, then `lock` records a new baseline,
+    with CI and code owners keeping the decision human.
 
 **What Sigildex is responsible for.** Computing the byte identity of a local
 skill directory, recording it as an approval baseline, and telling you — exactly
@@ -88,7 +93,7 @@ effort, capture:
 - **Publisher identity** — a person or organization you can name, and whether
   the account is one you have reason to trust.
 - **Provenance** — the repository, the subdirectory, and the exact commit or
-  tag you are looking at. You will want these again in step 6.
+  tag you are looking at. You will want these again when you check for updates.
 - **Maintenance** — recent commits, responsiveness on issues, whether it looks
   abandoned.
 - **Licensing** — whether you may use it at all.
@@ -263,12 +268,16 @@ Notes on the flags:
   is never drift. See "Configuring an update source" below.
 - `--approval-id` must match `[a-z0-9][a-z0-9-]{0,63}`. It defaults to a value
   derived from the directory name; pass it explicitly when you want a stable id
-  that does not depend on where the directory happens to sit.
+  that does not depend on what the directory happens to be called.
 - `--artifact-path` records the **project-relative** location the artifact will
   occupy. It defaults to the skill path relative to the current directory, so
   when you lock a quarantined copy that lives outside the project you must pass
-  it explicitly, as above — without it that lock exits `1` and tells you so.
-  Records never contain absolute local paths.
+  it explicitly, as above: locking a directory whose path, as given on the
+  command line, lies outside the current directory without `--artifact-path`
+  exits `1` and tells you so. The rule reads the path as written rather than
+  what it resolves to, so a symlink inside the project counts as inside — pass
+  the flag explicitly when you stage through a link. Records never contain
+  absolute local paths.
 - `--json` prints the record itself instead of the human summary, for tooling.
 
 Store records at `.sigildex/approvals/<approval-id>.lock.json`. Four rules hold
@@ -412,6 +421,11 @@ look.
 It is **user-supplied and never verified**. It sits outside the identity digest,
 so adding or changing it does not affect whether an artifact matches. It is an
 orchestration hint. It is not provenance, and must not be described as such.
+
+It is also not what `gh skill update` reads. That command works from the
+installed skill's own frontmatter, so re-locking with the `--source-*` flags
+does not configure it. `declared_source` is for your own read-only checker, a
+scheduled workflow you write, or the Agent Skill.
 
 `kind` is a free-form label — `git`, `registry`, `local`, or whatever your own
 tooling reads — recorded as you wrote it and never interpreted by the tool;

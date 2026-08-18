@@ -65,6 +65,18 @@ whether this makes skill adoption safe.
 Three commands. Local paths only. No network, no telemetry, no scoring. macOS
 and Linux; on Windows it exits `1` with an unsupported-platform error.
 
+**Before the first command, confirm the tool is there.** Run `sigildex
+--version`. It needs Node.js 20 or later and installs from npm:
+
+```sh
+npm install -g sigildex@0.1.0
+```
+
+If the shell answers `command not found` and exit `127`, the tool is not on
+PATH. That is a shell error, not a Sigildex verdict: report it as "the tool did
+not run" and never as "no drift". The same holds for exit `126` (found but not
+executable).
+
 ```
 sigildex lock <skill-path> --out <lock-path> [--approval-id <id>] [--artifact-path <path>]
                            [--source-kind <kind>] [--source-repository <url>] [--source-path <path>]
@@ -78,7 +90,9 @@ sigildex --version
 There are no other subcommands and no other flags. There is no `watch`, no
 `install`, no `search`, and no `scan`.
 
-**Exit codes — always check them, and always report them:**
+**Exit codes — always check them, and always report them.** They are listed by
+verdict rather than numerically: `2` is the routine outcome of a run that
+completed, while `1` and `3` mean no verdict was reached at all.
 
 | Code | Meaning | What you do |
 |---|---|---|
@@ -153,8 +167,9 @@ and stripping frontmatter says nothing about the file contents themselves, which
 you are not reading either way. Rule 6 applies to whatever does reach you.
 
 **Vocabulary.** Say "approval baseline" or "review snapshot". Never say that
-Sigildex verified, witnessed, or performed a human review; never say "verified
-provenance"; never claim it certifies safety.
+Sigildex verified, witnessed, or performed a human review; never call a
+`declared_source` verified, and never present it as provenance; never claim the
+tool certifies safety.
 
 ## Intent: adopt a new skill
 
@@ -221,10 +236,20 @@ provenance"; never claim it certifies safety.
    ```
    Expect exit `0`. The `--out` parent directory must already exist (the tool
    writes the record, it does not create directories), `--out` must not be
-   inside the directory being measured, `--out`'s filename must be exactly
-   `<approval-id>.lock.json`, and `--approval-id` must match
-   `[a-z0-9][a-z0-9-]{0,63}`. Locking a directory that is not inside the current
-   directory without `--artifact-path` exits `1` and says so.
+   inside the directory being measured, and `--out`'s filename must be exactly
+   `<approval-id>.lock.json`. Locking a directory whose path, as given on the
+   command line, lies outside the current directory without `--artifact-path`
+   exits `1` and says so, which is the case for every quarantined copy. The rule
+   reads the path as written rather than what it resolves to, so a symlink
+   inside the project counts as inside: pass `--artifact-path` explicitly when
+   you stage through a link.
+
+   `--approval-id` must match `[a-z0-9][a-z0-9-]{0,63}`. It is optional and
+   defaults to a value derived from the skill directory's name — but pass it
+   explicitly here, because you are locking a staging directory and the id must
+   not depend on what that directory happens to be called. When the derived
+   value would not match the grammar, `lock` exits `1` and asks for the flag
+   rather than guessing.
 
    The `--source-*` flags are all optional and record the `declared_source`
    hint used later by update checks. Set whatever you actually know — any
@@ -283,9 +308,12 @@ Read-only. Never modifies an active skill.
    It is an orchestration hint, never provenance — never describe it as verified
    or as evidence of origin.
 4. **Select a read-only checker** based on `kind` and how the skill was
-   installed. For GitHub-installed skills, `gh skill update --dry-run` reports
-   available updates without modifying files. It needs GitHub's CLI (`gh`, a
-   separate tool the human installs), version 2.90.0 or
+   installed. For skills installed with GitHub's CLI, `gh skill update
+   --dry-run` reports available updates without modifying files; it compares the
+   tree SHA in the installed skill's own frontmatter against the remote
+   repository, so it reads its own installer metadata and not the approval
+   record — re-locking with the `--source-*` flags does not configure it. It
+   needs GitHub's CLI (`gh`, a separate tool the human installs), version 2.90.0 or
    newer, is still labelled preview in its own help and subject to change, and
    skips anything installed with `gh skill install --pin`, with a notice. Its
    flags are exactly `--all`, `--dir`, `--dry-run`, `--force`, and `--unpin`;
@@ -295,13 +323,17 @@ Read-only. Never modifies an active skill.
    ```sh
    gh skill update --dry-run
    ```
-5. **Report per skill, one of three states:**
+5. **Report per skill, one of three states.** A check that was skipped, errored,
+   or could not be resolved is never one of them — say that the check did not
+   run, and never report it as CURRENT.
    - **CURRENT** — approved revision matches upstream.
    - **UPDATE AVAILABLE** — name the approved revision and the upstream
      revision.
-   - **NO UPDATE SOURCE CONFIGURED** — no usable `declared_source`. Give the
-     one-line fix, which is a re-lock with the source flags, never a hand-edit
-     of the record:
+   - **NO UPDATE SOURCE CONFIGURED** — no checker has anything to read:
+     neither installer metadata (for example the frontmatter `gh skill update`
+     uses) nor a usable `declared_source`. When the missing piece is
+     `declared_source`, give the one-line fix, which is a re-lock with the
+     source flags, never a hand-edit of the record:
      ```sh
      sigildex lock <artifact_path> \
        --approval-id <id> \

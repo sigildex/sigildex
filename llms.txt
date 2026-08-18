@@ -17,8 +17,9 @@ Agent Skill and read-only update checks.
 - Sigildex does NOT certify that a skill, script, dependency, remote service,
   installer, or runtime behavior is safe. It computes byte identity.
 - It does NOT verify provenance. A record's `declared_source` is user-supplied
-  and unverified, and must never be described as verified provenance. It is set
-  with `lock`'s `--source-*` flags; it is never hand-edited into a record.
+  and unverified: never describe it as verified, and never present it as
+  evidence of origin. It is set with `lock`'s `--source-*` flags; it is never
+  hand-edited into a record.
 - It does NOT audit an approvals directory. Duplicate approval ids, duplicate
   artifact paths, and locks left behind without their artifact are NOT detected
   by the CLI or by the CI workflow, which checks the skill/record pairs it is
@@ -57,8 +58,19 @@ GitHub, for a human reading over your shoulder.
   source at the same time.
   → https://sigildex.ai/safe-skill-adoption.md#recording-an-approval
   (rendered on GitHub: https://github.com/sigildex/sigildex/blob/main/docs/safe-skill-adoption.md#recording-an-approval)
-- **Check for updates** — read-only detection, on demand or on a schedule; report
-  CURRENT / UPDATE AVAILABLE / NO UPDATE SOURCE CONFIGURED; never auto-install.
+- **Check for updates** — read-only detection, on demand or on a schedule; never
+  auto-install. For a skill installed with GitHub's CLI the mechanism is
+  `gh skill update --dry-run`, which compares the tree SHA in the installed
+  skill's own frontmatter against the remote repository. It needs `gh` (a
+  separate tool the human installs) version 2.90.0 or newer, is still labelled
+  preview, and skips anything installed with `gh skill install --pin`. A
+  record's `declared_source` is a separate thing: an unverified hint that tells
+  your own read-only checker, or the Agent Skill workflow, where to look. It
+  configures nothing in `gh`, and re-locking with the `--source-*` flags does
+  not change what `gh skill update` reads. Use only documented read-only modes.
+  Report one of CURRENT / UPDATE AVAILABLE / NO UPDATE SOURCE CONFIGURED — and a
+  check that was skipped, errored, or could not be resolved is never reported as
+  CURRENT.
   → https://sigildex.ai/safe-skill-adoption.md#checking-approved-skills-for-updates
   (rendered on GitHub: https://github.com/sigildex/sigildex/blob/main/docs/safe-skill-adoption.md#checking-approved-skills-for-updates)
 - **Quarantine and compare** — stage the update outside the active installation,
@@ -66,8 +78,10 @@ GitHub, for a human reading over your shoulder.
   → https://sigildex.ai/safe-skill-adoption.md#staging-and-comparing-the-update
   (rendered on GitHub: https://github.com/sigildex/sigildex/blob/main/docs/safe-skill-adoption.md#staging-and-comparing-the-update)
 - **Configure CI** — copy-paste GitHub Actions workflow, the lifecycle state
-  matrix it enforces, and the CODEOWNERS + branch-protection settings that make
-  approval a human act. The workflow file itself is served at
+  matrix it enforces, and the CODEOWNERS + branch-protection settings that keep
+  approval a human act. Those are settings, not cryptography: an administrator
+  can bypass them, and what they buy is that unreviewed approval becomes a
+  visible administrative act. The workflow file itself is served at
   https://sigildex.ai/ci/approval-check.yml — copy it into `.github/workflows/`.
   → https://sigildex.ai/ci/README.md
   (rendered on GitHub: https://github.com/sigildex/sigildex/blob/main/docs/ci/README.md)
@@ -96,14 +110,25 @@ sigildex --version
 
 There are no other subcommands and no other flags. The `--out` filename must be
 exactly `<approval-id>.lock.json`; any other name exits `1` before anything is
-walked or written. The five `--source-*` flags are all optional and write the
+walked or written. `--approval-id` is optional and defaults to a value derived
+from the skill directory's name; when that derived value would not match
+`[a-z0-9][a-z0-9-]{0,63}`, `lock` exits `1` and asks for the flag rather than
+guessing. `--artifact-path` records the project-relative location the artifact
+will occupy and defaults to the skill path relative to the current directory, so
+locking a directory whose path, as given on the command line, lies outside the
+current directory without `--artifact-path` exits `1` and says so — the usual
+case when the reviewed copy sits in quarantine outside the project. That rule
+reads the path as written rather than what it resolves to, so a symlink inside
+the project counts as inside: pass `--artifact-path` explicitly when staging
+through a link. The five `--source-*` flags are all optional and write the
 unverified `declared_source` hint — any subset is valid, none of them means the
 field is omitted, and `verification` is set by the tool, never by a flag.
 
-Exit codes: `0` success, match, or identical · `2` drift detected, or the two
-directories differ · `1` tool, input, filesystem, or walk error · `3`
-unsupported or invalid approval record. Exit `1` and exit `3` are never a match
-and never a verdict.
+Exit codes, listed by verdict rather than numerically: `0` success, match, or
+identical · `2` drift detected, or the two directories differ · `1` tool, input,
+filesystem, or walk error · `3` unsupported or invalid approval record. Exit `2`
+is a routine outcome — the run completed and found a difference. Exit `1` and
+exit `3` are never a match and never a verdict.
 
 `--json` prints machine-readable output: the approval record from `lock` and
 from a matching `check`, the drift report from a drifting `check`, and the diff
@@ -112,8 +137,11 @@ before parsing. The drift report has no `schema_version` field; the diff report
 does.
 
 Install: requires Node.js 20 or later. `npm install -g sigildex@0.1.0`
-(published to npm as `sigildex`). The example trees used by the quickstart live
-in the repository, not in the package; clone it to run them.
+(published to npm as `sigildex`; package metadata at
+https://registry.npmjs.org/sigildex). If `sigildex` is not on PATH the shell
+reports exit `127` — a shell error, not a Sigildex verdict. The example trees
+used by the quickstart live in the repository, not in the package; clone it to
+run them.
 
 ## Agent files (fetchable, no JavaScript required)
 
@@ -141,6 +169,8 @@ domains serve the same files, so either URL retrieves the same bytes.
 ## Canonical resources
 
 - https://github.com/sigildex/sigildex — repository (canonical source of truth)
+- https://registry.npmjs.org/sigildex — npm package metadata: published
+  versions, dist-tags, and tarball URLs
 - https://github.com/sigildex/sigildex/blob/main/README.md — quickstart and the
   five-minute path
 - https://github.com/sigildex/sigildex/blob/main/docs/safe-skill-adoption.md —
