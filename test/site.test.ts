@@ -1,10 +1,10 @@
-import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 // @ts-expect-error -- the site builder is plain ESM JavaScript with no declarations.
-import { COPIED_FILES, RETIRED_ROUTE_PATHS, buildSite } from "../scripts/build-site.mjs";
+import { ASSET_FILES, COPIED_FILES, RETIRED_ROUTE_PATHS, buildSite } from "../scripts/build-site.mjs";
 
 /**
  * The website is generated from this repository's own files, so the two can
@@ -102,6 +102,18 @@ describe("served documents are copies, not forks", () => {
     }
   });
 
+  it("serves each asset byte-for-byte from its repository source", async () => {
+    // The link-preview image is a copy of the committed logo, not a re-encode,
+    // and the font licence is the file the fonts ship with, so neither can
+    // drift from the copy in the repository.
+    expect((ASSET_FILES as Array<unknown>).length).toBeGreaterThan(0);
+    for (const { source, destination } of ASSET_FILES as Array<{ source: string; destination: string }>) {
+      const original = await readFile(join(repositoryRoot, source));
+      const served = await readFile(join(committedSite, destination));
+      expect(served.equals(original), `${destination} differs from ${source}`).toBe(true);
+    }
+  });
+
   it("serves every published JSON Schema", async () => {
     const schemas = (await readdir(join(repositoryRoot, "schema"))).filter((name) => name.endsWith(".schema.json"));
     expect(schemas.length).toBeGreaterThan(0);
@@ -136,6 +148,29 @@ describe("every documented site URL resolves to a file", () => {
   }
 });
 
+describe("the builder's output directory guard", () => {
+  it("refuses a populated directory that is not a previous build", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "sigildex-site-guard-"));
+    try {
+      await writeFile(join(dir, "precious.txt"), "not a site\n");
+      await expect(buildSite(dir)).rejects.toThrow(/refusing to build/);
+      expect(await readFile(join(dir, "precious.txt"), "utf8")).toBe("not a site\n");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("accepts an empty directory and a previous build", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "sigildex-site-guard-"));
+    try {
+      await buildSite(dir);
+      await buildSite(dir);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("the front page", () => {
   let html: string;
 
@@ -149,27 +184,116 @@ describe("the front page", () => {
   });
 
   it("loads nothing from the network", () => {
-    // No element that would fetch a subresource: no `src` attribute at all, no
-    // <link> (stylesheet, preload, icon), no <img>, no CSS import or url().
+    // Reading the page must cost exactly one request: the document. Nothing
+    // that fetches a subresource — no `src`, no embedded media, no CSS import,
+    // no remote url(), no meta refresh. Every <link> either points at inline
+    // data or only declares a canonical address, which no browser fetches.
     expect(html).not.toMatch(/\ssrc\s*=/i);
-    expect(html).not.toMatch(/<link[\s>]/i);
-    expect(html).not.toMatch(/<img[\s>]/i);
+    expect(html).not.toMatch(/\ssrcset\s*=/i);
+    expect(html).not.toMatch(/<(img|image|use|object|embed|iframe|video|audio|source|track)[\s>]/i);
     expect(html).not.toMatch(/@import/i);
-    expect(html).not.toMatch(/url\(\s*['"]?https?:/i);
+    expect(html).not.toMatch(/http-equiv=["']?\s*refresh/i);
+    // `url(//host/…)` inherits the page's scheme, so it is a remote fetch too.
+    expect(html).not.toMatch(/url\(\s*['"]?\/\//i);
+
+    // Every url() argument is either inline bytes or a reference inside this
+    // same document.
+    const urls = [...html.matchAll(/url\(\s*(['"]?)([^)]*?)\1\s*\)/gi)].map(([, , value]) => value!.trim());
+    expect(urls.length).toBeGreaterThan(0);
+    for (const value of urls) {
+      expect(
+        value.startsWith("data:") || value.startsWith("#"),
+        `url() fetches something: ${value.slice(0, 40)}`,
+      ).toBe(true);
+    }
+
+    // An <svg> child can carry its own href, which fetches like any other.
+    for (const [svg] of html.matchAll(/<svg\b[\s\S]*?<\/svg>/gi)) {
+      for (const [, href] of svg.matchAll(/\s(?:xlink:)?href="([^"]*)"/gi)) {
+        expect(href!.startsWith("#"), `an svg child links out: ${href}`).toBe(true);
+      }
+    }
+
+    const links = html.match(/<link\b[^>]*>/gi) ?? [];
+    expect(links.length).toBeGreaterThan(0);
+    for (const tag of links) {
+      const rel = tag.match(/\srel="([^"]*)"/i)?.[1];
+      const href = tag.match(/\shref="([^"]*)"/i)?.[1] ?? "";
+      expect(["icon", "canonical"], `unexpected <link rel>: ${tag}`).toContain(rel);
+      if (rel === "icon") expect(href.startsWith("data:"), `icon is not inline: ${tag}`).toBe(true);
+      else expect(href).toBe(`${ORIGIN}/`);
+    }
+    expect(html.match(/<link\b[^>]*\brel="canonical"/gi) ?? []).toHaveLength(1);
+  });
+
+  it("serves the licence for the typefaces it redistributes", () => {
+    // Embedding the fonts as base64 is redistribution, and the OFL requires the
+    // licence to travel with them.
+    expect(html).toContain(`href="${ORIGIN}/fonts/GEIST-OFL.txt"`);
+    expect(html).toContain("SIL Open Font License 1.1");
+    expect(html).toContain("copyright 2024 The Geist Project Authors");
+    // …and again inside the stylesheet, where the @font-face rules are.
+    expect(html).toMatch(/\/\* Geist and Geist Mono, copyright 2024 [^*]*\*\/\n@font-face/);
+  });
+
+  it("keeps motion out of the way when the reader asks it to", () => {
+    // The staggered reveals carry an animation-delay under `fill-mode: both`,
+    // so zeroing durations alone would leave the hero invisible for a third of
+    // a second on a machine that asked for no motion.
+    const reduce = html.match(/@media \(prefers-reduced-motion:reduce\)\{[\s\S]*?\n\}/)?.[0];
+    expect(reduce, "no prefers-reduced-motion block").toBeDefined();
+    expect(reduce).toMatch(/animation-duration:\.001ms !important/);
+    expect(reduce).toMatch(/animation-delay:0s !important/);
+    expect(reduce).toMatch(/transition-delay:0s !important/);
+  });
+
+  it("embeds both typefaces inline rather than fetching them", () => {
+    const faces = html.match(/@font-face\{[^}]*\}/g) ?? [];
+    expect(faces).toHaveLength(2);
+    expect(faces.some((face) => face.includes("'Geist'"))).toBe(true);
+    expect(faces.some((face) => face.includes("'Geist Mono'"))).toBe(true);
+    for (const face of faces) expect(face).toMatch(/src:url\(data:font\/woff2;base64,[A-Za-z0-9+/=]+\)/);
+  });
+
+  it("draws the mark inline from the committed vector", async () => {
+    const sigil = await readFile(join(repositoryRoot, "scripts", "site-assets", "sigil.svg"), "utf8");
+    const path = sigil.match(/\sd="([^"]+)"/)?.[1];
+    expect(path, "sigil.svg has no path data").toBeDefined();
+    // Inlined, not linked: the same geometry appears in the nav, the hero, and
+    // the footer, and the favicon is the same file as an encoded data: URI.
+    expect(html.split(path!).length - 1).toBe(3);
+    expect(html).toMatch(/rel="icon" href="data:image\/svg\+xml,%3Csvg/);
+  });
+
+  it("stays small enough to arrive in one round trip", () => {
+    // Two embedded variable fonts dominate the byte count; the ceiling exists
+    // so a future addition cannot quietly turn the front page into a download.
+    expect(Buffer.byteLength(html, "utf8")).toBeLessThan(200 * 1024);
+  });
+
+  it("points link previews at an image the site actually serves", () => {
+    expect(html).toContain(`content="${ORIGIN}/logo.png"`);
   });
 
   it("carries the headline and the description", () => {
     expect(html).toContain("Know what changed in an Agent Skill before you trust the update.");
+    // The description says what the tool reports — files, and how they changed.
+    // `diff` classifies files; it says nothing about capabilities.
+    expect(html).toContain(
+      "Sigildex is an open-source, local workflow for recording the exact Agent Skill you reviewed, detecting when the installed bytes drift from it, and showing reviewers exactly which files changed and how.",
+    );
+    expect(html).not.toMatch(/capabilit/i);
     expect(html).toContain(
       "It runs without an API, account, database, or LLM. Sigildex complements security scanners; it does not certify that a skill is safe.",
     );
   });
 
-  it("carries all seven sections and nothing more", () => {
+  it("carries all eight sections and nothing more", () => {
     const anchors: Array<[string, string]> = [
+      ["overview", "Approval records for Agent Skills"],
       ["positioning", "Sigildex does not replace discovery, security scanning, or human review."],
-      ["workflow", "The workflow"],
       ["demo", "You approved a skill. Then it changed."],
+      ["workflow", "The workflow"],
       ["ecosystem", "Where Sigildex sits"],
       ["agent", "Use it with your agent"],
       ["links", "Links"],
@@ -206,6 +330,32 @@ describe("the front page", () => {
     }
   });
 
+  it("walks all ten stages and marks the four a Sigildex command does the work in", () => {
+    // Stage names are stored as plain text and escaped at render, so the one
+    // with an ampersand appears here in its escaped form.
+    for (const stage of [
+      "Discover",
+      "Stage",
+      "Inspect / scan",
+      "Human review",
+      "Record approval",
+      "Install &amp; verify",
+      "Detect update",
+      "Quarantine",
+      "Diff",
+      "Re-approve",
+    ]) {
+      expect(html, `missing stage ${stage}`).toContain(`<h3>${stage}</h3>`);
+    }
+    expect(html.match(/<li class="step/g) ?? []).toHaveLength(10);
+    expect(html.match(/<li class="step ours"/g) ?? []).toHaveLength(4);
+  });
+
+  it("shows how to install the published package", () => {
+    expect(html).toContain("npm install -g sigildex@0.1.0");
+    expect(html).toContain('href="https://www.npmjs.com/package/sigildex"');
+  });
+
   it("points agents at both machine-readable entry points", () => {
     expect(html).toContain(`href="${ORIGIN}/llms.txt"`);
     expect(html).toContain(`href="${ORIGIN}/SKILL.md"`);
@@ -220,6 +370,17 @@ describe("the front page", () => {
       "https://github.com/sigildex/sigildex/blob/main/docs/identity-spec.md",
       "https://github.com/sigildex/sigildex/blob/main/docs/case-study.md",
       "https://github.com/sigildex/sigildex/blob/main/docs/postmortem.md",
+      // Each neighbouring tool is linked to the page it is named after; every
+      // one of these was fetched and resolves to that project.
+      "https://cli.github.com/",
+      "https://cli.github.com/manual/gh_skill_update",
+      "https://github.com/vercel-labs/skills",
+      "https://github.com/NVIDIA/SkillSpector",
+      "https://github.com/cisco-ai-defense/skill-scanner",
+      "https://github.com/snyk/agent-scan",
+      "https://github.com/sigildex/sigildex/blob/main/SECURITY.md",
+      "https://github.com/sigildex/sigildex/blob/main/docs/threat-model.md",
+      "https://registry.npmjs.org/sigildex",
     ]) {
       expect(html, `missing link ${url}`).toContain(`href="${url}"`);
     }
@@ -356,6 +517,7 @@ describe("content-type routes", () => {
       ["/ci/approval-check.yml", "text/yaml; charset=utf-8"],
       ["/llms.txt", "text/plain; charset=utf-8"],
       ["/robots.txt", "text/plain; charset=utf-8"],
+      ["/fonts/GEIST-OFL.txt", "text/plain; charset=utf-8"],
       ["/.well-known/security.txt", "text/plain; charset=utf-8"],
     ];
     for (const [requestPath, contentType] of expected) {
@@ -378,6 +540,10 @@ describe("the machine-readable root files", () => {
     expect(sitemap).toContain(`<loc>${ORIGIN}/</loc>`);
     for (const { destination } of COPIED_FILES as Array<{ destination: string }>) {
       expect(sitemap, `sitemap omits /${destination}`).toContain(`<loc>${ORIGIN}/${destination}</loc>`);
+    }
+    // Assets are served at stable URLs but are not documents to index.
+    for (const { destination } of ASSET_FILES as Array<{ destination: string }>) {
+      expect(sitemap, `sitemap lists the asset /${destination}`).not.toContain(`<loc>${ORIGIN}/${destination}</loc>`);
     }
   });
 

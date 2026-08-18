@@ -3,5 +3,21 @@ Sigildex
 Copyright (c) 2026 Sigildex LLC
 
 All examples and test fixtures in this repository are synthetic and written for
-this project. Provenance for any third-party material is recorded here; none is
-currently included.
+this project. Provenance for any third-party material is recorded here.
+
+--------------------------------------------------------------------------
+Third-party material
+
+Geist and Geist Mono
+  Files:     scripts/site-assets/geist-latin.woff2
+             scripts/site-assets/geist-mono-latin.woff2
+  Used by:   scripts/build-site.mjs, which embeds them in site/index.html as
+             base64 data: URIs so the page fetches no fonts over the network.
+  Copyright 2024 The Geist Project Authors
+             (https://github.com/vercel/geist-font)
+  License:   SIL Open Font License, Version 1.1. The full license text is
+             distributed with the fonts at scripts/site-assets/GEIST-OFL.txt,
+             is served by the website at https://sigildex.ai/fonts/GEIST-OFL.txt
+             (copied to site/fonts/GEIST-OFL.txt by the site build) and linked
+             from the page footer, and is also available with a FAQ at
+             https://openfontlicense.org
