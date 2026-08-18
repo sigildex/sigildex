@@ -76,8 +76,11 @@ flowchart LR
   class REC sigildex;
 ```
 
-The record is a reviewed baseline, not an attestation: it says what a human
-approved, not that the artifact is safe or that it came from where it claims.
+The filled box is the artifact Sigildex produces. The record is a reviewed
+baseline, not an attestation: it says what was designated as approved, not that
+the artifact is safe, that it came from where it claims, or that the
+designation was a person rather than a process — your repository's review
+controls hold that in place.
 Sigildex never discovers updates itself — the update checker is a separate tool
 you run, on demand or on a schedule you own.
 
@@ -132,11 +135,11 @@ answers this one.
 
 | What you already have | What it answers | What it does not | With Sigildex |
 |---|---|---|---|
-| Git diff | What changed between two commits, and what a reviewer saw in the pull request that carried it. `git diff --exit-code <commit> -- <path>` can even gate on the working tree | Follow the skill out of the repository: the copy an agent loads often lives in another directory, another checkout, or another machine, where the commit is out of reach | The record is one file that travels: `check` compares any tree, anywhere, against it — with defined exclusions, executable bits, and exit codes |
+| Git diff | What changed between two commits, and what a reviewer saw in the pull request that carried it. `git diff --exit-code <commit> -- <path>` can even gate on the working tree | Follow the skill out of the repository: the copy an agent loads often lives in another directory, another checkout, or another machine, where no commit covers the bytes on disk | The record is one file that travels: `check` compares any tree, anywhere, against it — with defined exclusions, executable bits, and exit codes |
 | A checksum or package lockfile | That a named archive or coordinate resolves to the bytes you pinned; a hand-rolled manifest can go file by file | What changed when the check fails — a bare hash mismatch names no file and explains nothing | Drift is reported per file, with its class and executable bit, and `diff` explains the change in review terms |
 | A signature or provenance attestation | Who published the artifact and, increasingly, how it was built | Say whether those bytes are the ones your team read and approved | The record names the exact bytes a reviewer designated — a claim held in place by your repository's review controls, not by the tool. The two compose: origin from the attestation, the reviewed baseline from the record |
 | A security scanner | Evidence about a candidate: risky patterns, known indicators, policy violations | Establish that the copy running later is byte-identical to the copy the evidence was gathered about | Scan the candidate, approve it, then `check` that what is installed is still that candidate |
-| Your installer's update check | That upstream has moved, and usually what it moved to | Decide whether the replacement should happen, or leave a record that a human agreed to it | Quarantine the update, `diff` it against the approved tree, and lock a new baseline once a human has read it |
+| Your installer's update check | That upstream has moved, and usually what it moved to | Decide whether the replacement should happen, or leave a reviewable record of that decision where your PR process can require a human to approve it | Quarantine the update, `diff` it against the approved tree, and lock a new baseline once it has been read |
 
 Keep all five: Sigildex answers only the question they leave open, which is
 whether what is installed is still what a human approved.

@@ -29,7 +29,7 @@ numbers in [identity-spec.md](identity-spec.md).
 | Platform contract: Windows refused before any work; identical digests on macOS and Linux | §13 | `src/cli/main.ts`, `src/identity/walk.ts` | `test/cli.test.ts`, `test/adversarial-walker.test.ts` |
 | CLI surface: commands, flags, usage text | [README](../README.md), [SKILL.md](../skills/sigildex/SKILL.md) | `src/cli/index.ts`, `src/cli/main.ts` | `test/cli.test.ts`, `test/declared-source-cli.test.ts` |
 | CI lifecycle example, and what it does not watch | [`docs/ci/README.md`](ci/README.md) | `docs/ci/approval-check.yml` | `test/ci-lifecycle.test.ts` |
-| Version-drift example trees and their exit codes | [`examples/version-drift/README.md`](https://github.com/sigildex/sigildex/blob/main/examples/version-drift/README.md) | `examples/version-drift/` | `examples/version-drift/verify-example.mjs` (run by `npm run verify:example`), `test/transcript.test.ts` |
+| Version-drift example trees and their exit codes | [`examples/version-drift/README.md`](../examples/version-drift/README.md) (not in the npm package) | `examples/version-drift/` | `examples/version-drift/verify-example.mjs` (run by `npm run verify:example`), `test/transcript.test.ts` |
 | Website build, and the transcript it prints | [README](../README.md) | `scripts/build-site.mjs` | `test/site.test.ts`, `test/transcript.test.ts` |
 
 ## Four things the table does not say

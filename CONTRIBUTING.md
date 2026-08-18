@@ -63,7 +63,10 @@ covers the specification section by section, and
 ## Maintenance and compatibility policy
 
 - **0.1.x receives documentation and packaging fixes**, and fixes that bring
-  the implementation back to what the specification already says.
+  the implementation back to what the specification already says. The one
+  surface outside that promise is the JavaScript module entry point, which is
+  published without a compatibility guarantee — see
+  [docs/code-map.md](docs/code-map.md).
 - **The record format follows the specification's compatibility rules.**
   `schema_version` and `spec_version` are carried in every record, and a
   `check` that reads a value it does not support exits 3 rather than comparing
