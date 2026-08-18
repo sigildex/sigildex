@@ -1,15 +1,15 @@
-# Skill approval check — copy into .github/workflows/; set the three `env` values.
+# Skill approval check. Copy into .github/workflows/ and set the three `env` values.
 # Proves: the ONE skill/record pair in `env` is self-consistent, and so was the base.
-# Cannot prove: that the change should be approved (CODEOWNERS + branch protection), and it audits no approvals directory.
+# Cannot prove: that the change should be approved (CODEOWNERS + branch protection). Audits no approvals directory.
 # Rationale for every block: README.md next to this file.
 name: Skill approval check
 
-# pull_request, never pull_request_target; this file runs as the pull request
-# writes it, so put `.github/workflows/**` under CODEOWNERS — see README.md.
+# pull_request, never pull_request_target. This file runs as the pull request
+# writes it, so put `.github/workflows/**` under CODEOWNERS (see README.md).
 on:
   pull_request:
 
-# Read-only; no secrets, no write permission — see README.md.
+# Read-only: no secrets, no write permission (see README.md).
 permissions:
   contents: read
 
@@ -41,7 +41,7 @@ jobs:
         run: |
           set -euo pipefail
           # Installed OUTSIDE the checkout: resolution that starts in the
-          # workspace would prefer a package the pull request committed — see README.md.
+          # workspace would prefer a package the pull request committed (see README.md).
           TOOL="$RUNNER_TEMP/sigildex-tool"
           mkdir -p "$TOOL"
           # A private package.json pins the install root; entering the directory
@@ -54,7 +54,7 @@ jobs:
 
       - name: Materialize the base revision
         env:
-          # The base commit from the event payload, never origin/main — see README.md.
+          # The base commit from the event payload, never origin/main (see README.md).
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           set -euo pipefail
@@ -70,8 +70,8 @@ jobs:
         run: |
           set -euo pipefail
           BASE="$RUNNER_TEMP/base"
-          # Absolute path into the install above; a bare name or `npx` would
-          # resolve through the pull request's own tree — see README.md.
+          # Absolute path into the install above. A bare name or `npx` would
+          # resolve through the pull request's own tree (see README.md).
           SIGILDEX="$RUNNER_TEMP/sigildex-tool/node_modules/.bin/sigildex"
           # Nothing from the candidate skill is executed, sourced, or installed;
           # it is only read and hashed.
@@ -84,8 +84,8 @@ jobs:
           [ -x "$SIGILDEX" ] \
             || fail "The approval tool is not installed at the expected path. The install step must run before this one."
 
-          # Only pull_request supplies a base commit; an empty one would make
-          # `git diff ""` read as "changed" — a pass built on nothing. Refuse.
+          # Only pull_request supplies a base commit. An empty one would make
+          # `git diff ""` read as "changed", a pass built on nothing. Refuse.
           git rev-parse --verify --quiet "${BASE_SHA:-}^{commit}" > /dev/null \
             || fail "BASE_SHA is not a commit in this checkout. This workflow requires the pull_request trigger."
 
@@ -100,7 +100,7 @@ jobs:
 
           # Prove the base before any outcome is decided, INCLUDING the passing
           # ones: a removal, a record-only change and a no-op are all statements
-          # about the base revision — see README.md.
+          # about the base revision (see README.md).
           if [ "$base_skill" = yes ] && [ "$base_lock" = yes ]; then
             base_status=0
             "$SIGILDEX" check "$BASE/$SKILL_DIR" --against "$BASE/$APPROVAL" > /dev/null || base_status=$?
@@ -151,7 +151,7 @@ jobs:
           # Markdown. Counts are advisory; the exit codes above are the gate.
           if [ -s "${RUNNER_TEMP}/delta.json" ]; then
             # Parsed from the JSON, not scanned from its text: the report embeds
-            # the skill's frontmatter verbatim — see README.md.
+            # the skill's frontmatter verbatim (see README.md).
             counts=$(node -e '
               const report = JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"));
               const size = (key) => (Array.isArray(report[key]) ? report[key].length : 0);

@@ -6,8 +6,8 @@ fails a pull request when the skill and the record stop agreeing.
 
 Copy it into `.github/workflows/`, set the three values under `env`
 (`SKILL_DIR`, `APPROVAL`, `SIGILDEX_VERSION`), and require it in branch
-protection. It watches one skill; for several, duplicate the file per skill or
-loop the final step over a list. Put the workflow itself under CODEOWNERS —
+protection. It watches one skill. For several, duplicate the file per skill or
+loop the final step over a list. Put the workflow itself under CODEOWNERS;
 [Governance](#governance) says why.
 
 ## What it proves
@@ -16,16 +16,16 @@ For the **one** skill/record pair named in `env`:
 
 - **The base is sound.** The skill at the pull request's base commit matches
   the record at that commit. This is checked before any outcome is decided,
-  including the passing ones — a removal, a record-only change, and a no-op
-  are all statements about the base — so a broken base excuses nothing.
+  including the passing ones. A removal, a record-only change, and a no-op are
+  all statements about the base, so a broken base excuses nothing.
 - **The candidate is consistent.** The skill in the pull request matches the
   record in the pull request.
 - **The states move together.** Adding, updating, or removing a skill without
-  the matching change to its record fails; so does a record without an
+  the matching change to its record fails. So does a record without an
   artifact, or an artifact without a record.
 
 When the skill existed at the base, the job summary also carries an approval
-delta — files added, removed, changed — so a reviewer knows the size of the
+delta (files added, removed, changed), so a reviewer knows the size of the
 change before opening the diff.
 
 | Pull request does this | Result |
@@ -38,14 +38,14 @@ change before opening the diff.
 | Removes both | pass |
 | Removes only one of them | **fail** |
 | Touches neither | pass |
-| Starts from a base whose skill and record already disagree | **fail**, whatever else the pull request does — removal included |
+| Starts from a base whose skill and record already disagree | **fail**, whatever else the pull request does, removal included |
 | Starts from a base whose approval record is not a valid record | **fail**, reported as an invalid record rather than as drift |
 
 ## What it cannot prove
 
 - **That the change should be approved.** Consistency is mechanical; approval
   is a judgement. A pull request that rewrites a skill and regenerates its
-  record in one commit passes. Only a human reading the change can approve it —
+  record in one commit passes. Only a human reading the change can approve it;
   see [Governance](#governance).
 - **That a skill was added at all.** A pull request that adds a *new* skill
   directory with no record touches neither `SKILL_DIR` nor `APPROVAL`, so the
@@ -60,7 +60,7 @@ change before opening the diff.
   again before activation if your threat model needs it.
 - **Approval-store hygiene.** Neither this workflow nor the tool audits
   `.sigildex/approvals/` for duplicate approval ids, duplicate artifact paths,
-  or records left behind without their artifact; put the directory under
+  or records left behind without their artifact. Put the directory under
   CODEOWNERS and review additions. The one layout rule `sigildex lock`
   enforces at write time is that a record's filename matches its
   `approval_id`.
@@ -118,12 +118,12 @@ the workflow file.
 - **`pull_request`, never `pull_request_target`.** `pull_request_target` runs
   with a writable token in the base repository's context while checking out
   untrusted content. The cost of `pull_request` is that the workflow file is
-  pull-request-controlled — covered by CODEOWNERS above, not by the snippet.
+  pull-request-controlled. CODEOWNERS above covers that; the snippet does not.
 - **The tool is installed outside the checkout and invoked by absolute path.**
-  Package resolution that starts in the workspace is attacker-controlled:
+  Package resolution that starts in the workspace is attacker-controlled.
   `npx sigildex@<version>` run in the pull request's tree prefers a
   `node_modules/sigildex` the pull request committed whenever its version
-  satisfies the request, without contacting the registry — so the artifact
+  satisfies the request, without contacting the registry, so the artifact
   under review would supply the program that judges it. Disabling lifecycle
   scripts does not help; the shadowed package *is* the command. The install
   runs in a runner temp directory with its own private `package.json`, so npm
@@ -139,9 +139,9 @@ the workflow file.
 - **The base commit comes from the event payload** and is fetched explicitly:
   the default checkout is shallow, and `origin/main` is not necessarily the
   base of the pull request. A trigger that supplies no base commit is refused,
-  because an empty diff spec would fail in a way that reads as "changed" — a
+  because an empty diff spec would fail in a way that reads as "changed", a
   pass built on nothing.
-- **The job summary carries category counts only** — never paths, frontmatter,
+- **The job summary carries category counts only**, never paths, frontmatter,
   or script text, because summaries render Markdown. Counts are parsed from the
   JSON report rather than scanned from its text, since the report embeds the
   skill's own frontmatter verbatim. Counts are advisory; the gate is the exit
@@ -152,5 +152,5 @@ the workflow file.
 ## Seeing it end to end
 
 [`examples/version-drift`](https://github.com/sigildex/sigildex/tree/main/examples/version-drift)
-walks the same lifecycle locally — adoption, verification, drift, review,
-re-approval, removal — with the exit code for each step.
+walks the same lifecycle locally (adoption, verification, drift, review,
+re-approval, removal) with the exit code for each step.

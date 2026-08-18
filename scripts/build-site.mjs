@@ -214,8 +214,8 @@ const DOC_LINKS = [
   ],
 ];
 const BACKGROUND_LINKS = [
-  ["Architecture case study", `${BLOB}/docs/case-study.md`, "Building an agent-first system, and what it taught."],
-  ["Postmortem", `${BLOB}/docs/postmortem.md`, "Why the earlier hosted index was retired, and what it cost."],
+  ["Case study", `${BLOB}/docs/case-study.md`, "Designing an API for agents first, and what it taught."],
+  ["Postmortem", `${BLOB}/docs/postmortem.md`, "Why the hosted index was built, and why this ships without one."],
 ];
 
 /** The limits, stated once on this page. Bold head, one sentence each. */

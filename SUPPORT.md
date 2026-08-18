@@ -5,5 +5,5 @@ Questions, bug reports, and feature requests go in
 repository. Support is best effort: no service-level agreement and no
 guaranteed response time.
 
-A suspected security vulnerability is not an issue — follow
+Do not open an issue for a suspected security vulnerability. Follow
 [SECURITY.md](SECURITY.md).
