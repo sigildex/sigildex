@@ -369,7 +369,7 @@ footer .type{flex-basis:100%;font-size:12.5px;color:var(--subtle);max-width:none
       <h2>Three commands</h2>
       <ul class="cmds">
         <li><code>sigildex lock</code><span class="d">Record exactly what a human approved, beside the code.</span></li>
-        <li><code>sigildex check</code><span class="d">Verify the copy that will actually run. A mismatch fails closed.</span></li>
+        <li><code>sigildex check</code><span class="d">Verify the copy that will actually run. A mismatch exits 2.</span></li>
         <li><code>sigildex diff</code><span class="d">Explain what changed, file by file, before you re-approve.</span></li>
       </ul>
       <ul class="codes">
@@ -432,6 +432,7 @@ Review the changes and re-lock only after approving them.
 <span class="x2">2</span></pre>
     </div>
     <p class="note">An update added an executable script where the approved version had none, and rewrote the instructions to call it. <code>sigildex diff</code> shows exactly what changed. A human decides whether to approve it.</p>
+    <p class="note">The transcript above is run from the repository's <code>examples/version-drift</code> directory; in a real project you store records at <code>.sigildex/approvals/&lt;approval-id&gt;.lock.json</code> and pass <code>--artifact-path</code> when the reviewed copy sits outside the project.</p>
   </div>
 </section>
 
@@ -475,7 +476,7 @@ Review the changes and re-lock only after approving them.
     <li class="step ours">
       <span class="n">06</span>
       <h3>Install &amp; verify</h3>
-      <p><code>sigildex check</code> the copy that will run. Mismatch fails closed.</p>
+      <p><code>sigildex check</code> the copy that will run. A mismatch exits 2; your preflight or CI gate stops there.</p>
       <span class="who">Sigildex</span>
     </li>
     <li class="step">
@@ -486,7 +487,7 @@ Review the changes and re-lock only after approving them.
     </li>
     <li class="step">
       <span class="n">08</span>
-      <h3>Quarantine</h3>
+      <h3>Quarantine the update</h3>
       <p>Stage the update outside the active install, which stays untouched.</p>
       <span class="who">Documented</span>
     </li>

@@ -26,9 +26,9 @@ npm install -g sigildex@0.1.0
 ```
 
 Requires Node.js 20 or later, on macOS or Linux. Windows is out of scope in
-v0.1; run under WSL or on a Linux or macOS host. If your shell reports exit
-`127` for `sigildex`, the command is not on your PATH — that is a shell error,
-not a Sigildex verdict.
+v0.1; the CLI exits `1` there. Run it under WSL or on a macOS or Linux host. If
+your shell reports exit `127` for `sigildex`, the command is not on your PATH —
+that is a shell error, not a Sigildex verdict.
 
 The example trees used below ship in the repository, not in the npm package, so
 the five-minute path runs from a clone:
@@ -69,7 +69,7 @@ The filled stages are the four a Sigildex command does the work in.
 | 3 | Inspect and scan | Scanners: [NVIDIA SkillSpector](https://github.com/NVIDIA/SkillSpector), the [Cisco AI Defense Skill Scanner](https://github.com/cisco-ai-defense/skill-scanner), [Snyk Agent Scan](https://github.com/snyk/agent-scan). They produce evidence, not certification. Plus the manual review checklist | — |
 | 4 | Human review | A person reads the skill and decides | — |
 | 5 | Record approval | `sigildex lock` writes `.sigildex/approvals/<approval-id>.lock.json` | **`sigildex lock`** |
-| 6 | Install and verify | Copy to the active skills directory, then check the copy that will actually run; a mismatch fails closed | **`sigildex check`** |
+| 6 | Install and verify | Copy to the active skills directory, then check the copy that will actually run; a mismatch exits `2`, and your preflight or CI gate stops there | **`sigildex check`** |
 | 7 | Detect update | Read-only checks such as [`gh skill update --dry-run`](https://cli.github.com/manual/gh_skill_update) (GitHub CLI 2.90.0 or newer) or a package-manager dry run, on demand or on a schedule you own. Never automatic | Documented |
 | 8 | Quarantine the update | Stage the candidate update outside the active installation, which stays untouched | Documented; the Agent Skill instructs the agent to do this |
 | 9 | Diff | `sigildex diff old new` reports what changed, per file, by class | **`sigildex diff`** |

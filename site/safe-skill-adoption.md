@@ -317,6 +317,11 @@ symlink where a regular file was expected); a run that cannot finish its walk
 never emits a verdict. Exit `3` means the record itself is invalid or was
 hand-edited into inconsistency.
 
+How you install decides whether an update can be detected later: `gh skill
+update` reads the frontmatter its own installer wrote, so a skill you place by
+copying, as above, is invisible to it — decide which of the two installation
+strategies below a given skill uses before you lock it.
+
 A successful check binds the artifact's bytes **during the measurement window
 only**. It says nothing about what the harness loads five minutes later. If your
 threat model needs execution-time integrity, re-run `check` immediately before
@@ -382,7 +387,7 @@ Two levels, both legitimate:
 Right for personal installs. Ask your agent — or run it yourself — whenever you
 want to know.
 
-With GitHub's CLI (`gh`, version 2.90 or newer — a separate tool you install
+With GitHub's CLI (`gh`, version 2.90.0 or newer — a separate tool you install
 yourself; `gh skill` is built in from version 2.90.0 onward and is
 still labelled **preview** in its own help, so it is subject to change; checked
 against the manual, <https://cli.github.com/manual/gh_skill_update>, as of
@@ -430,7 +435,9 @@ scheduled workflow you write, or the Agent Skill.
 `kind` is a free-form label — `git`, `registry`, `local`, or whatever your own
 tooling reads — recorded as you wrote it and never interpreted by the tool;
 the examples in this guide all use `git`, and the only rule is the grammar
-below.
+below. `tracking_policy` is free-form in the same way: this guide uses
+`pinned-commit` in one example and `track-default-branch` in another, and both
+are labels for your own tooling, not values the tool knows.
 
 You never hand-edit the JSON to set it. `lock` writes it from the `--source-*`
 flags, so an update source is configured by re-recording the approval:

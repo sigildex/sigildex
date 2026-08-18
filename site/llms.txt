@@ -50,8 +50,10 @@ GitHub, for a human reading over your shoulder.
   (rendered on GitHub: https://github.com/sigildex/sigildex/blob/main/docs/safe-skill-adoption.md#adopting-an-already-installed-skill)
 - **Review a candidate skill** — stage in quarantine outside every active skills
   directory, run scanners for evidence, work the manual review checklist, decide.
-  → https://sigildex.ai/safe-skill-adoption.md#scanning-and-manual-review
-  (rendered on GitHub: https://github.com/sigildex/sigildex/blob/main/docs/safe-skill-adoption.md#scanning-and-manual-review)
+  → https://sigildex.ai/safe-skill-adoption.md#quarantine-staging (staging)
+  → https://sigildex.ai/safe-skill-adoption.md#scanning-and-manual-review (scan + review)
+  (rendered on GitHub: https://github.com/sigildex/sigildex/blob/main/docs/safe-skill-adoption.md#quarantine-staging and
+  https://github.com/sigildex/sigildex/blob/main/docs/safe-skill-adoption.md#scanning-and-manual-review)
 - **Record an approval** — `sigildex lock` after a human decision; store at
   `.sigildex/approvals/<approval-id>.lock.json`, which is the only filename the
   tool will write for that id. Pass the `--source-*` flags to record an update
@@ -123,6 +125,9 @@ the project counts as inside: pass `--artifact-path` explicitly when staging
 through a link. The five `--source-*` flags are all optional and write the
 unverified `declared_source` hint — any subset is valid, none of them means the
 field is omitted, and `verification` is set by the tool, never by a flag.
+`--source-kind` (1–32 characters of `[a-z0-9-]`) and `--source-tracking` (at
+most 128 UTF-8 bytes) are both free-form labels recorded as written for your
+own tooling; `<policy>` in the synopsis is not an enumeration.
 
 Exit codes, listed by verdict rather than numerically: `0` success, match, or
 identical · `2` drift detected, or the two directories differ · `1` tool, input,
@@ -164,7 +169,9 @@ run them.
 
 Both JSON Schemas declare their `$id` under `https://sigildex.dev/schema/<name>`
 rather than under the host above; `sigildex.dev` mirrors `sigildex.ai` and both
-domains serve the same files, so either URL retrieves the same bytes.
+domains serve the same files, so either URL retrieves the same bytes. A
+validator that resolves `$id` by fetching therefore depends on `sigildex.dev`
+serving those bytes.
 
 ## Canonical resources
 

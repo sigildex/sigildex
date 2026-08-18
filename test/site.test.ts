@@ -341,7 +341,7 @@ describe("the front page", () => {
       "Record approval",
       "Install &amp; verify",
       "Detect update",
-      "Quarantine",
+      "Quarantine the update",
       "Diff",
       "Re-approve",
     ]) {

@@ -171,7 +171,8 @@ const WORKFLOW_STAGES = [
   },
   {
     stage: "Install & verify",
-    bodyHtml: "<code>sigildex check</code> the copy that will run. Mismatch fails closed.",
+    bodyHtml:
+      "<code>sigildex check</code> the copy that will run. A mismatch exits 2; your preflight or CI gate stops there.",
     who: "Sigildex",
     ours: true,
   },
@@ -182,7 +183,7 @@ const WORKFLOW_STAGES = [
     ours: false,
   },
   {
-    stage: "Quarantine",
+    stage: "Quarantine the update",
     bodyHtml: "Stage the update outside the active install, which stays untouched.",
     who: "Documented",
     ours: false,
@@ -729,7 +730,7 @@ ${styles(sansFont, monoFont)}</style>
       <h2>Three commands</h2>
       <ul class="cmds">
         <li><code>sigildex lock</code><span class="d">Record exactly what a human approved, beside the code.</span></li>
-        <li><code>sigildex check</code><span class="d">Verify the copy that will actually run. A mismatch fails closed.</span></li>
+        <li><code>sigildex check</code><span class="d">Verify the copy that will actually run. A mismatch exits 2.</span></li>
         <li><code>sigildex diff</code><span class="d">Explain what changed, file by file, before you re-approve.</span></li>
       </ul>
       <ul class="codes">
@@ -761,6 +762,7 @@ ${styles(sansFont, monoFont)}</style>
       <pre class="term-body" tabindex="0" role="group" aria-label="Terminal transcript: locking version one, verifying it, then checking version two">${colourTranscript(DEMO_TRANSCRIPT)}</pre>
     </div>
     <p class="note">An update added an executable script where the approved version had none, and rewrote the instructions to call it. <code>sigildex diff</code> shows exactly what changed. A human decides whether to approve it.</p>
+    <p class="note">The transcript above is run from the repository's <code>examples/version-drift</code> directory; in a real project you store records at <code>.sigildex/approvals/&lt;approval-id&gt;.lock.json</code> and pass <code>--artifact-path</code> when the reviewed copy sits outside the project.</p>
   </div>
 </section>
 
