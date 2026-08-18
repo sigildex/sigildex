@@ -419,13 +419,26 @@ h3{font-size:15px;font-weight:600;letter-spacing:-.01em;line-height:1.35}
 .brand:hover{opacity:1}
 .brand .sig{color:var(--accent)}
 .topnav ul{display:flex;gap:24px;list-style:none}
-.topnav a{color:var(--muted);font-size:14px;font-weight:500}
+/* the padding is the tap target, not decoration: it takes each link to ~40px
+   tall inside the fixed 60px bar, so nothing moves on a pointer device */
+.topnav a{display:block;padding:11px 0;color:var(--muted);font-size:14px;font-weight:500}
 .topnav a:hover{color:var(--text);opacity:1}
 .bar-end{margin-left:auto;display:flex;align-items:center;gap:18px}
 .bar-end a{color:var(--muted);font-size:14px;font-weight:500}
 .bar-end a:hover{color:var(--text);opacity:1}
 .bar-end .go{color:var(--accent)}
-@media(max-width:760px){.topnav{display:none}}
+/* Below the breakpoint the bar wraps: the brand and the two outbound links keep
+   the first row, and the section links take a row of their own underneath. No
+   script and no disclosure widget, so every link stays reachable and focusable
+   in source order, and the taller bar is measured back into the anchor offset. */
+@media(max-width:760px){
+  .topbar .wrap{flex-wrap:wrap;height:auto;gap:0;padding-top:11px}
+  .topnav{order:3;flex-basis:100%;margin-top:9px;border-top:1px solid var(--border)}
+  .topnav ul{flex-wrap:wrap;gap:0 20px;justify-content:space-between}
+  .topnav a{font-size:13.5px}
+  .bar-end{gap:16px}
+  section[id]{scroll-margin-top:100px}
+}
 
 /* ---------------- hero ---------------- */
 .hero{padding:104px 0 84px;position:relative}
@@ -637,7 +650,17 @@ footer .type{flex-basis:100%;font-size:12.5px;color:var(--subtle);max-width:none
 `;
 }
 
-/** The one page a human reads. No scripts, no external requests, no tracking. */
+/**
+ * The one page a human reads. No scripts, no external requests, no tracking.
+ *
+ * The head carries the llms.txt proposal's discovery relation,
+ * `rel="describedby"`, pointing at the llms.txt that covers this path. It is
+ * metadata a client may choose to follow, not a subresource: no browser fetches
+ * it while rendering, so the page still costs exactly one request. The href is
+ * relative so it resolves against whichever host serves the page, and no `type`
+ * is declared — the proposal pairs `type="text/markdown"` with `rel="alternate"`
+ * only, and this site serves llms.txt as `text/plain`.
+ */
 function indexHtml({ sansFont, monoFont, mark, faviconSvg }) {
   const description =
     "Sigildex is an open-source, local workflow for recording the exact Agent Skill you reviewed, detecting when the installed bytes drift from it, and showing reviewers exactly which files changed and how.";
@@ -675,6 +698,7 @@ function indexHtml({ sansFont, monoFont, mark, faviconSvg }) {
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#07080C">
 <link rel="canonical" href="${ORIGIN}/">
+<link rel="describedby" href="/llms.txt">
 <link rel="icon" href="${faviconDataUri(faviconSvg)}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Sigildex">

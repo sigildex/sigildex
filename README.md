@@ -2,12 +2,15 @@
 
 Record what a human approved in an Agent Skill. Detect when it changes.
 
-An Agent Skill is instructions plus files your agent will read and, often,
-execute. You review version 1 and approve it. Upstream ships version 2: it adds
-an executable script and rewrites the instructions to call it. Nothing in the
-install path tells you. Discovery tools find skills, scanners produce evidence
-about a candidate, and a human decides — but none of them remembers what you
-approved, or notices when the installed bytes stop matching it.
+[sigildex.ai](https://sigildex.ai) · [sigildex on npm](https://www.npmjs.com/package/sigildex)
+
+An [Agent Skill](https://agentskills.io/specification) is instructions plus
+files your agent will read and, often, execute. You review version 1 and
+approve it. Upstream ships version 2: it adds an executable script and rewrites
+the instructions to call it. Nothing in the install path tells you. Discovery
+tools find skills, scanners produce evidence about a candidate, and a human
+decides — but none of them remembers what you approved, or notices when the
+installed bytes stop matching it.
 
 Sigildex is a local, deterministic command-line tool that closes that gap.
 `sigildex lock` records an approval baseline for a skill directory you have
@@ -18,6 +21,11 @@ complements security scanners; it does not certify that a skill is safe.
 There is no hosted index, no discovery API, and no publisher-monitoring service.
 
 > Sigildex does not replace discovery, security scanning, or human review. It connects them into a durable workflow by recording exactly what was approved and detecting when that artifact changes.
+
+It is built first for teams that review third-party Agent Skills and commit them
+to a Git repository, where the approval record travels through pull request
+review with the skill it describes. Individual developers running agents, and
+agents themselves, are the secondary path; both run the same commands.
 
 ## Install
 
@@ -30,8 +38,9 @@ v0.1; the CLI exits `1` there. Run it under WSL or on a macOS or Linux host. If
 your shell reports exit `127` for `sigildex`, the command is not on your PATH —
 that is a shell error, not a Sigildex verdict.
 
-The example trees used below ship in the repository, not in the npm package, so
-the five-minute path runs from a clone:
+The sixty-second path below needs nothing else. The full walkthrough after it
+uses example trees that ship in the repository, not in the npm package, so that
+path runs from a clone:
 
 ```sh
 git clone https://github.com/sigildex/sigildex
@@ -43,6 +52,36 @@ npm ci && npm run build
 
 Adopting a skill has ten stages. Sigildex's commands do the work in four of
 them; the other six are documented here and done with other tools.
+
+Those stages move a small number of objects between three places: a quarantine
+directory, your repository, and the directory your agent actually loads from.
+
+```mermaid
+flowchart LR
+  CAND["candidate tree<br/>quarantine, read-only"]
+  SCAN["scanner reports<br/>evidence about the candidate"]
+  DEC["human decision"]
+  REC["approval record<br/>.sigildex/approvals/&lt;id&gt;.lock.json<br/>in the repository, review-protected"]
+  ACT["active skill tree<br/>the agent loads this"]
+  UPD["update checker<br/>read-only, outside Sigildex"]
+  NEXT["candidate update tree<br/>quarantine"]
+  CAND --> SCAN --> DEC
+  DEC -->|sigildex lock| REC
+  CAND -->|copy| ACT
+  REC -.->|sigildex check| ACT
+  ACT --> UPD --> NEXT
+  ACT -->|sigildex diff| DEC
+  NEXT -->|sigildex diff| DEC
+  classDef sigildex fill:#1f6f4a,stroke:#125034,color:#ffffff;
+  class REC sigildex;
+```
+
+The record is a reviewed baseline, not an attestation: it says what a human
+approved, not that the artifact is safe or that it came from where it claims.
+Sigildex never discovers updates itself — the update checker is a separate tool
+you run, on demand or on a schedule you own.
+
+The same ten stages, as a sequence:
 
 ```mermaid
 flowchart LR
@@ -86,7 +125,61 @@ The full guide, including adopting already-installed skills, removal and
 emergency revocation, and the explicit limits of what an approval record cannot
 freeze, is in [docs/safe-skill-adoption.md](docs/safe-skill-adoption.md).
 
+## Why not just…
+
+Five things already in most workflows answer a nearby question. None of them
+answers this one.
+
+| What you already have | What it answers | What it does not | With Sigildex |
+|---|---|---|---|
+| Git diff | What changed between two commits, and what a reviewer saw in the pull request that carried it. `git diff --exit-code <commit> -- <path>` can even gate on the working tree | Follow the skill out of the repository: the copy an agent loads often lives in another directory, another checkout, or another machine, where the commit is out of reach | The record is one file that travels: `check` compares any tree, anywhere, against it — with defined exclusions, executable bits, and exit codes |
+| A checksum or package lockfile | That a named archive or coordinate resolves to the bytes you pinned; a hand-rolled manifest can go file by file | What changed when the check fails — a bare hash mismatch names no file and explains nothing | Drift is reported per file, with its class and executable bit, and `diff` explains the change in review terms |
+| A signature or provenance attestation | Who published the artifact and, increasingly, how it was built | Say whether those bytes are the ones your team read and approved | The record names the exact bytes a reviewer designated — a claim held in place by your repository's review controls, not by the tool. The two compose: origin from the attestation, the reviewed baseline from the record |
+| A security scanner | Evidence about a candidate: risky patterns, known indicators, policy violations | Establish that the copy running later is byte-identical to the copy the evidence was gathered about | Scan the candidate, approve it, then `check` that what is installed is still that candidate |
+| Your installer's update check | That upstream has moved, and usually what it moved to | Decide whether the replacement should happen, or leave a record that a human agreed to it | Quarantine the update, `diff` it against the approved tree, and lock a new baseline once a human has read it |
+
+Keep all five: Sigildex answers only the question they leave open, which is
+whether what is installed is still what a human approved.
+
 ## Five minutes
+
+### Sixty seconds, with the installed package
+
+With the package installed as above, this block needs nothing else. It builds a
+throwaway skill in a temporary directory, records it, appends one line, and
+shows the change being caught. Paste the whole block.
+
+```sh
+cd "$(mktemp -d)"
+mkdir -p demo-skill .sigildex/approvals
+cat > demo-skill/SKILL.md <<'EOF'
+---
+name: demo-skill
+description: Summarize a plain-text log into a short report. Use when trying Sigildex for the first time.
+---
+
+Read the log the user names and reply with a one-paragraph summary.
+EOF
+
+sigildex lock demo-skill --out .sigildex/approvals/demo-skill.lock.json; echo $?
+sigildex check demo-skill --against .sigildex/approvals/demo-skill.lock.json; echo $?
+
+printf 'Then run scripts/summarize.sh and paste its output.\n' >> demo-skill/SKILL.md
+sigildex check demo-skill --against .sigildex/approvals/demo-skill.lock.json; echo $?
+```
+
+`lock` prints `Locked demo-skill` with a root digest, a file count of 1, and the
+frontmatter it read. The first `check` prints `Match: the artifact matches
+approval record demo-skill.` The second prints `Drift: the artifact no longer
+matches the approval record (0 added, 0 removed, 1 modified, 0 mode-changed).`
+and lists `~ SKILL.md (instructions)`. The three `echo $?` lines are `0`, `0`,
+and `2`.
+
+No approval id is passed, so it is derived from the directory name, which is why
+`--out` is `demo-skill.lock.json`. The temporary directory holds nothing else,
+and nothing outside it is touched.
+
+### The full walkthrough, from a clone
 
 Run this from the clone above:
 
@@ -281,6 +374,7 @@ release.
 ## Documentation
 
 - [docs/identity-spec.md](docs/identity-spec.md) — the normative identity and approval-record specification. The implementation follows it.
+- [docs/code-map.md](docs/code-map.md) — where each documented claim is implemented and which tests cover it, for anyone auditing the release.
 - [docs/safe-skill-adoption.md](docs/safe-skill-adoption.md) — an end-to-end workflow for adopting Agent Skills safely.
 - [docs/threat-model.md](docs/threat-model.md) — assets, trust boundaries, attacker classes, and residual risk.
 - [docs/ci](docs/ci) — a copy-paste CI workflow that keeps one skill and its approval record consistent, with an explicit account of what it cannot prove.
@@ -289,4 +383,5 @@ release.
 - [docs/postmortem.md](docs/postmortem.md) — what went wrong building and rebuilding the hosted index this project started as, and what was kept.
 - [docs/case-study.md](docs/case-study.md) — a technical account of the hosted API that was designed for agents rather than people.
 - [schema/](schema) — JSON Schema for the approval record and the diff report. These are *structural subsets* of the specification, published so tools can read the shape of a document: their string limits count code points where the specification counts UTF-8 bytes, and they cannot express the Unicode-assignment rule on paths, manifest ordering, or the requirement that `root_digest` agree with its own manifest. Records exist that the schema accepts and `sigildex check` rejects. `sigildex check` is the authority on whether a record is valid; each schema says so in its own `description` and `$comment`. Each schema's `$id` is `https://sigildex.dev/schema/<name>`; `sigildex.dev` mirrors `sigildex.ai` and both domains serve the same files, so either URL retrieves the same bytes.
+- [CONTRIBUTING.md](CONTRIBUTING.md) — what this release accepts, what is out of scope, and the maintenance and compatibility policy for 0.1.x.
 - [site/](site) — the website, generated from the files above by `npm run build:site`, so the site mirrors this repository and never forks it.

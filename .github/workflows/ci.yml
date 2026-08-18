@@ -40,3 +40,73 @@ jobs:
 
       - name: Verify example
         run: npm run verify:example
+
+  # The matrix above tests the working tree. This job tests what a user gets:
+  # the packed tarball, installed into an isolated prefix, exercised through the
+  # binary npm puts on their PATH. It catches a `files` list that omits
+  # something the CLI needs, and a build that only works from a checkout.
+  pack-smoke:
+    name: packed tarball
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Pack, install, and run the published binary
+        run: |
+          set -euo pipefail
+
+          expected="$(node -p 'require("./package.json").version')"
+          npm pack
+          # Named from package.json rather than globbed: the repository root can
+          # hold a tarball from an earlier version.
+          tarball="sigildex-$expected.tgz"
+          test -f "$tarball" || { echo "::error::npm pack produced no $tarball"; exit 1; }
+
+          prefix="$RUNNER_TEMP/pack-smoke-prefix"
+          npm install -g --prefix "$prefix" "./$tarball"
+          bin="$prefix/bin/sigildex"
+          test -x "$bin" || { echo "::error::the tarball installed no sigildex binary at $bin"; exit 1; }
+
+          # The version the binary reports must be the version that was packed.
+          reported="$("$bin" --version)"
+          test "$reported" = "sigildex $expected" || {
+            echo "::error::--version printed '$reported', expected 'sigildex $expected'"
+            exit 1
+          }
+
+          # The documented drift sequence, from a scratch copy of the example
+          # trees so nothing is written into the checkout: lock v1 (0), check v1
+          # against it (0), check v2 against it (2).
+          work="$RUNNER_TEMP/pack-smoke-drift"
+          rm -rf "$work"
+          mkdir -p "$work"
+          cp -R examples/version-drift/skill-v1 examples/version-drift/skill-v2 "$work/"
+          cd "$work"
+
+          expect_exit() {
+            local want="$1" label="$2"
+            shift 2
+            local got=0
+            "$@" || got=$?
+            test "$got" -eq "$want" || {
+              echo "::error::$label exited $got, expected $want"
+              exit 1
+            }
+          }
+
+          expect_exit 0 "lock skill-v1" "$bin" lock skill-v1 --approval-id log-summarizer --out log-summarizer.lock.json
+          expect_exit 0 "check skill-v1" "$bin" check skill-v1 --against log-summarizer.lock.json
+          expect_exit 2 "check skill-v2" "$bin" check skill-v2 --against log-summarizer.lock.json

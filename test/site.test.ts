@@ -214,16 +214,37 @@ describe("the front page", () => {
       }
     }
 
+    // Three relations are allowed, and no other. `icon` carries its bytes
+    // inline; `canonical` only declares an address; `describedby` names the
+    // llms.txt covering this path, which a browser records and never fetches.
+    // Every relation that does fetch — stylesheet, preload, prefetch,
+    // preconnect, modulepreload, manifest, alternate — is excluded by being
+    // absent from this list, and the attributes that give a <link> fetch
+    // semantics are rejected outright on all three.
     const links = html.match(/<link\b[^>]*>/gi) ?? [];
     expect(links.length).toBeGreaterThan(0);
     for (const tag of links) {
       const rel = tag.match(/\srel="([^"]*)"/i)?.[1];
       const href = tag.match(/\shref="([^"]*)"/i)?.[1] ?? "";
-      expect(["icon", "canonical"], `unexpected <link rel>: ${tag}`).toContain(rel);
+      expect(["icon", "canonical", "describedby"], `unexpected <link rel>: ${tag}`).toContain(rel);
+      expect(tag, `a <link> declares fetch semantics: ${tag}`).not.toMatch(
+        /\s(as|crossorigin|imagesrcset|imagesizes|integrity|fetchpriority|blocking|media|referrerpolicy)\s*=/i,
+      );
       if (rel === "icon") expect(href.startsWith("data:"), `icon is not inline: ${tag}`).toBe(true);
-      else expect(href).toBe(`${ORIGIN}/`);
+      else if (rel === "canonical") expect(href).toBe(`${ORIGIN}/`);
+      // Same origin, and relative so it resolves against whichever host serves
+      // the page. Nothing cross-origin can hide behind this relation.
+      else expect(href, `describedby points somewhere else: ${tag}`).toBe("/llms.txt");
     }
     expect(html.match(/<link\b[^>]*\brel="canonical"/gi) ?? []).toHaveLength(1);
+    expect(html.match(/<link\b[^>]*\brel="describedby"/gi) ?? []).toHaveLength(1);
+  });
+
+  it("declares the llms.txt covering the page, and serves that file", async () => {
+    // The discovery relation the llms.txt proposal recommends. It is only
+    // useful if the path behind it is a file this site actually serves.
+    expect(html).toContain('<link rel="describedby" href="/llms.txt">');
+    expect(await listFiles(committedSite)).toContain("llms.txt");
   });
 
   it("serves the licence for the typefaces it redistributes", () => {
