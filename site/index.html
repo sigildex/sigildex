@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sigildex — know what changed in an Agent Skill</title>
-<meta name="description" content="Sigildex is an open-source, local workflow for recording the exact Agent Skill you reviewed, detecting when the installed bytes drift from it, and showing reviewers exactly which files changed and how.">
+<meta name="description" content="Sigildex is a small open-source CLI. It fingerprints the exact bytes of an Agent Skill a human approved and tells you, file by file, when the installed copy drifts.">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#07080C">
 <link rel="canonical" href="https://sigildex.ai/">
@@ -13,12 +13,12 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Sigildex">
 <meta property="og:title" content="Sigildex — know what changed in an Agent Skill">
-<meta property="og:description" content="Sigildex is an open-source, local workflow for recording the exact Agent Skill you reviewed, detecting when the installed bytes drift from it, and showing reviewers exactly which files changed and how.">
+<meta property="og:description" content="Sigildex is a small open-source CLI. It fingerprints the exact bytes of an Agent Skill a human approved and tells you, file by file, when the installed copy drifts.">
 <meta property="og:url" content="https://sigildex.ai/">
 <meta property="og:image" content="https://sigildex.ai/logo.png">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Sigildex — know what changed in an Agent Skill">
-<meta name="twitter:description" content="Sigildex is an open-source, local workflow for recording the exact Agent Skill you reviewed, detecting when the installed bytes drift from it, and showing reviewers exactly which files changed and how.">
+<meta name="twitter:description" content="Sigildex is a small open-source CLI. It fingerprints the exact bytes of an Agent Skill a human approved and tells you, file by file, when the installed copy drifts.">
 <meta name="twitter:image" content="https://sigildex.ai/logo.png">
 <style>
 /* Geist and Geist Mono, copyright 2024 The Geist Project Authors, SIL Open Font License 1.1. Full licence: https://sigildex.ai/fonts/GEIST-OFL.txt */
@@ -77,7 +77,7 @@ code,.mono{font-family:var(--mono);font-feature-settings:'calt','liga'}
 p code,li code,h3 code{background:var(--surface);color:var(--accent);border-radius:5px;padding:1.5px 5px;font-size:.9em;overflow-wrap:anywhere}
 /* inside dense inline text a chip reads as a gap before the punctuation that
    follows it, so those places keep the colour and drop the box */
-a code,.step p code,.eco .eg code,.commands code{background:none;padding:0}
+a code,.step p code,.commands code{background:none;padding:0}
 
 .skip{position:absolute;left:-9999px;top:0}
 .skip:focus{left:12px;top:12px;z-index:200;background:var(--accent);color:#06070A;padding:10px 16px;border-radius:9px;font-weight:600}
@@ -176,22 +176,15 @@ h1{font-size:clamp(34px,5.4vw,58px);font-weight:500;line-height:1.06;letter-spac
 .cmds li:first-child{border-top:none}
 .commands code{font-size:13.5px;font-weight:500;color:var(--accent);overflow-wrap:anywhere}
 .commands .d{font-size:13.5px;color:var(--dim);line-height:1.55}
+.codes-label{margin-top:4px;padding-top:15px;border-top:1px solid var(--border);font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
 .codes{
-  margin-top:4px;padding-top:15px;border-top:1px solid var(--border);list-style:none;
+  margin-top:6px;list-style:none;
   display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:7px 16px;
   font-family:var(--mono);font-size:11.5px;line-height:1.5;color:var(--muted);
 }
 .codes li{min-width:0}
 .codes b{font-weight:600;margin-right:6px}
 .codes .c0{color:var(--good)}.codes .c2{color:var(--warn)}.codes .c1,.codes .c3{color:var(--dim)}
-
-/* ---------------- positioning ---------------- */
-.statement{
-  font-size:clamp(17px,2.1vw,21px);line-height:1.6;color:var(--text);max-width:74ch;
-  padding:26px 0 26px 26px;border-left:2px solid var(--accent);
-  letter-spacing:-.012em;
-}
-.statement em{color:var(--accent);font-style:normal}
 
 /* ---------------- terminal ---------------- */
 .term{
@@ -221,55 +214,43 @@ h1{font-size:clamp(34px,5.4vw,58px);font-weight:500;line-height:1.06;letter-spac
 .term-body .x2{color:var(--warn)}
 
 /* ---------------- workflow ---------------- */
-.spine{margin-top:32px;overflow-x:auto;border:1px solid var(--border);border-radius:11px;background:var(--surface)}
-.spine p{padding:13px 18px;font-family:var(--mono);font-size:12.5px;color:var(--dim);white-space:nowrap}
-.steps{list-style:none;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-top:16px}
+.steps{list-style:none;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-top:36px}
 .step{
-  display:flex;flex-direction:column;gap:7px;min-width:0;
+  display:flex;flex-direction:column;gap:8px;min-width:0;
   padding:18px 16px 16px;border-radius:12px;
   background:rgba(255,255,255,.015);border:1px solid var(--border);
   transition:border-color .2s,transform .2s;
 }
 .step:hover{border-color:var(--border-hi);transform:translateY(-2px)}
+/* the owner tag: who does the work in this stage, on the card itself */
+.step .tag{
+  align-self:flex-start;padding:3px 8px;border-radius:6px;
+  font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;
+  color:var(--subtle);background:rgba(255,255,255,.04);border:1px solid var(--border);
+}
 .step .n{font-family:var(--mono);font-size:11px;color:var(--subtle);letter-spacing:.08em}
 .step p{font-size:13px;line-height:1.55;color:var(--muted);overflow-wrap:anywhere}
-.step .who{margin-top:auto;padding-top:10px;font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--subtle)}
+.step .eg{margin-top:auto;padding-top:6px;font-size:12.5px;color:var(--subtle)}
 .step.ours{
-  background:linear-gradient(180deg,var(--accent-faint),transparent 60%),var(--elevated);
-  border-color:var(--border-accent);
-  box-shadow:0 0 30px -12px rgba(var(--accent-rgb),.35);
-}
-.step.ours .n,.step.ours .who{color:var(--accent)}
-.step.ours h3{color:var(--text)}
-@media(max-width:1000px){.steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:560px){.steps{grid-template-columns:minmax(0,1fr)}}
-
-/* ---------------- ecosystem ---------------- */
-.eco{list-style:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:36px}
-.eco li{
-  display:flex;flex-direction:column;gap:9px;min-width:0;
-  padding:22px 22px 20px;border-radius:var(--radius);
-  background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,0) 42%),var(--raised);
-  border:1px solid var(--border);
-}
-.eco .stage{font-size:15px;font-weight:600;letter-spacing:-.01em}
-.eco .what{font-size:13.5px;color:var(--dim);line-height:1.6}
-.eco .eg{font-size:13px;color:var(--muted);line-height:1.65;overflow-wrap:anywhere}
-.eco .tag{
-  margin-top:auto;padding-top:12px;font-family:var(--mono);font-size:10.5px;
-  text-transform:uppercase;letter-spacing:.1em;color:var(--subtle);
-}
-.eco li.here{
   background:linear-gradient(180deg,var(--accent-dim),transparent 62%),var(--elevated);
   border-color:var(--border-accent);
   box-shadow:0 0 44px -14px rgba(var(--accent-rgb),.42);
 }
-.eco li.here .tag{color:var(--accent)}
-/* five cards into three columns: the one that is this project takes the
-   double-width slot on the second row rather than leaving it ragged */
-.eco li.here{grid-column:span 2}
-@media(max-width:900px){.eco{grid-template-columns:repeat(2,minmax(0,1fr))}.eco li.here{grid-column:span 2}}
-@media(max-width:600px){.eco{grid-template-columns:minmax(0,1fr)}.eco li.here{grid-column:span 1}}
+.step.ours .n{color:var(--accent)}
+.step.ours .tag{color:#06070A;background:var(--accent);border-color:var(--accent)}
+.step.ours h3{color:var(--text)}
+.step.ours p{color:var(--dim)}
+@media(max-width:1000px){.steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.steps{grid-template-columns:minmax(0,1fr)}}
+/* the two loops, one line; on a narrow screen the second loop takes the row
+   under the ↻ rather than forcing a horizontal scroll */
+.loop{
+  display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;
+  margin-top:20px;padding:13px 18px;border:1px solid var(--border);border-radius:11px;background:var(--surface);
+  font-family:var(--mono);font-size:12.5px;color:var(--dim);
+}
+.loop span{min-width:0}
+.loop .cyc{color:var(--accent);font-size:15px;line-height:1}
 
 /* ---------------- agent entry points ---------------- */
 .entries{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:32px}
@@ -298,13 +279,16 @@ h1{font-size:clamp(34px,5.4vw,58px);font-weight:500;line-height:1.06;letter-spac
 .docs a:hover{opacity:1;border-color:var(--border-hi);transform:translateY(-2px)}
 .docs .nm{font-size:14.5px;font-weight:600;letter-spacing:-.01em;color:var(--accent)}
 .docs .ds{font-size:13px;color:var(--muted);line-height:1.55;overflow-wrap:anywhere}
+.docs-group{margin-top:28px;font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:var(--subtle)}
+.docs-group+.docs{margin-top:12px}
 @media(max-width:900px){.docs{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.docs{grid-template-columns:minmax(0,1fr)}}
 
-/* ---------------- status ---------------- */
-.prose{max-width:70ch;margin-top:30px;display:flex;flex-direction:column;gap:16px}
-.prose p{color:var(--dim);font-size:15.5px}
-.prose strong{color:var(--text);font-weight:600}
+/* ---------------- limits ---------------- */
+.limits{list-style:none;max-width:70ch;margin-top:30px;display:flex;flex-direction:column;gap:14px}
+.limits li{padding-left:22px;position:relative;color:var(--dim);font-size:15.5px}
+.limits li::before{content:'';position:absolute;left:0;top:.72em;width:8px;height:1px;background:var(--accent)}
+.limits strong{color:var(--text);font-weight:600}
 
 /* ---------------- footer ---------------- */
 footer{border-top:1px solid var(--border);padding:44px 0 60px}
@@ -352,8 +336,9 @@ footer .type{flex-basis:100%;font-size:12.5px;color:var(--subtle);max-width:none
     <nav class="topnav" aria-label="Primary">
       <ul>
         <li><a href="#workflow">Workflow</a></li>
-        <li><a href="#ecosystem">Where it sits</a></li>
+        <li><a href="#agent">Agent</a></li>
         <li><a href="#links">Docs</a></li>
+        <li><a href="#limits">Limits</a></li>
       </ul>
     </nav>
     <div class="bar-end">
@@ -371,21 +356,22 @@ footer .type{flex-basis:100%;font-size:12.5px;color:var(--subtle);max-width:none
       <svg class="hero-mark r1" width="72" height="72" viewBox="0 0 400 400" fill="currentColor" fill-rule="evenodd" aria-hidden="true" focusable="false"><path d="m200 71.6l-28.2 56.4h14.2v1.5l-1.4 7.1-1.3 .9-8.5 2.5-9.2 4.4-6.3 3.8h-1.1l-33.7-24.4h-.5v-.6h-.8l23.8 36.1-4.7 5.8-3.1 5-4.1 8.3-2.4 6.7-1 .7-6.8 1.4-27.9 7-17.4 4.8-2.4 .3-.3 .8 .9 .6 2.3 .3 33.3 8.8 18.5 4.4 3.3 10.2 3.8 7.9v1l-16.9 17 10.9 11v1.1l-6.1 5.9-3.6 4.6-8.9 12.7 14-9.7 2.5-2 7-6.9h.7l60.2 60.2 1.2 .8 1.2-.8 60.2-60.2h.7l7 6.9 2.5 2 14 9.7-8.9-12.7-3.6-4.6-6.1-5.9v-1.1l10.9-11-16.9-17v-1l3.8-7.9 3.3-10.2 18.5-4.4 33.3-8.8 2.3-.3 .9-.6-.3-.8-2.4-.3-17.4-4.8-27.9-7-6.8-1.4-1-.7-2.4-6.7-4.1-8.3-3.1-5-4.7-5.8 23.8-36.1h-.8v.6h-.5l-33.7 24.4h-1.1l-6.3-3.8-9.2-4.4-8.5-2.5-1.3-.9-1.4-7.1v-1.5h14.2zm0 147.5l-2.9 .1-1.5-.2-2.2-.8-3.6-1.7-.6-1 7.1-7 1.6 .4h2.1 2.1l1.6-.4 7.1 7-.6 1-3.6 1.7-2.2 .8-1.5 .2zm0-28.2h-1.6l-2.2 .4-6.9-6.9 .5-1.1 2.6-1.2 2-.9 3.5-.7h2.1 2.1l3.5 .7 2 .9 2.6 1.2 .5 1.1-6.9 6.9-2.2-.4zm-56.8 70.8l10.9-11 35.7 35.7 .9 1.5 6 27.3zm60.1 53.5l6-27.3 .9-1.5 35.7-35.7 10.9 11zm-7-34.7l-1-1.4-.6-3.7-11.5-50.5-.4-2.4 .5-1.3 1.1-.2 4 2.6 2.7 1.2 5.1 1.4 .3 .8v53.3zm7.2-.2v-53.3l.3-.8 5.1-1.4 2.7-1.2 4-2.6 1.1 .2 .5 1.3-.4 2.4-11.5 50.5-.6 3.7-1 1.4zm-27.2-51.8l.6 .2 .6 1.9 7.5 33.5 2 7.7v1.4h-.6l-27.3-27.4zm64.6 17.3l-27.3 27.4h-.6v-1.4l2-7.7 7.5-33.5 .6-1.9 .6-.2zm-102.5 10.7l-.9-.5-5.5-5.5 .6-1.1 14.8-14.8 .6-1-.9-1.2-3-5.3-1.9-3.9-2.2-6.9 .7-.3 2.5 .8 29.1 6.1-33.5 33.5zm122.8-.1l-33.5-33.5 29.1-6.1 2.5-.8 .7 .3-2.2 6.9-1.9 3.9-3 5.3-.9 1.2 .6 1 14.8 14.8 .6 1.1-5.5 5.5-.9 .5zm-142-52.9l1.2-.3 52.9 .2 .7 .9v1.2l2.3 6.4 2.5 3.6v.7l-.8 .8h-1.4l-55.5-12.3zm159.7 1.2l-55.5 12.3h-1.4l-.8-.8v-.7l2.5-3.6 2.3-6.4v-1.2l.7-.9 52.9-.2 1.2 .3zm-95.1 5.8l-1.5-2.5-1.3-3.2-.6-5 .6-4.9 1.2-3.1 1.5-2.4 .8-.2 7 7.1-.4 1.3v4.8l.4 1.1-6.9 7zm31.6 0l-6.9-7 .4-1.1v-4.8l-.4-1.3 7-7.1 .8 .2 1.5 2.4 1.2 3.1 .6 4.9-.6 5-1.3 3.2-1.5 2.5zm-95.7-14.4l.8-.8 46.3-10.3 9.6-2h1.8l.6 .6v1.2h-.5l-3.1 5.8-1.2 4v1.1l-.7 .6-52.9 .2zm159.9 .4l-52.9-.2-.7-.6v-1.1l-1.2-4-3.1-5.8h-.5v-1.2l.6-.6h1.8l9.6 2 46.3 10.3 .8 .8zm-138.6-13v-1.4l4.1-8.5 5.4-7.8h1.1l8.7 12.9-.3 1-2.6 .3-3.5 1zm105.1-2.5l-3.5-1-2.6-.3-.3-1 8.7-12.9h1.1l5.4 7.8 4.1 8.5v1.4zm-62.3-2.2l-.9-.7 .1-2.1 6-26.6 5-25.5 .1-2.8-10.6-.2-.3-.4 13.3-26.6v79.1l-1 1h-1.6l-3.4 1.2-4 2-1.9 1.6zm31.6 0l-1.9-1.6-4-2-3.4-1.2h-1.6l-1-1v-79.1l13.3 26.6-.3 .4-10.6 .2 .1 2.8 5 25.5 6 26.6 .1 2.1-.9 .7zm-65.7-28.2l27.3 19.7v1.8l-1.1 3.8-1.1 .6-5.2 1.1-1.5 .2-.7-.7zm82.9 26.5l-.7 .7-1.5-.2-5.2-1.1-1.1-.6-1.1-3.8v-1.8l27.3-19.7zm-50.3-32.2l.5 .6-4 17.7-13.3-9.6v-.8l6.6-4 5.8-2.5zm39.8 1.4l5.8 2.5 6.6 4v.8l-13.3 9.6-4-17.7 .5-.6z"/></svg>
       <p class="kicker r1">Approval records for Agent Skills</p>
       <h1 class="r2">Know what changed in an Agent Skill before you trust the update.</h1>
-      <p class="lead r3">Sigildex is an open-source, local workflow for recording the exact Agent Skill you reviewed, detecting when the installed bytes drift from it, and showing reviewers exactly which files changed and how. It runs without an API, account, database, or LLM. Sigildex complements security scanners; it does not certify that a skill is safe.</p>
+      <p class="lead r3">A small open-source CLI. It fingerprints the exact bytes of an Agent Skill a human approved and tells you, file by file, when the installed copy drifts.</p>
       <p class="install r4"><span class="p">$</span> npm install -g sigildex@0.1.1</p>
       <div class="cta r4">
         <a class="btn btn-primary" href="https://github.com/sigildex/sigildex/blob/main/docs/safe-skill-adoption.md">Read the guide</a>
         <a class="btn btn-ghost" href="https://github.com/sigildex/sigildex">View on GitHub</a>
       </div>
-      <p class="facts r5">MIT licensed · Node.js 20+ · macOS and Linux · no network calls, no telemetry</p>
+      <p class="facts r5">MIT licensed · Node.js 20+ · macOS and Linux · runs locally — no server, account, database, or LLM · no network calls, no telemetry</p>
     </div>
     <aside class="commands r4">
       <h2>Three commands</h2>
       <ul class="cmds">
-        <li><code>sigildex lock</code><span class="d">Record exactly what a human approved, beside the code.</span></li>
+        <li><code>sigildex lock</code><span class="d">Record exactly what a human approved, as a file in your repo.</span></li>
         <li><code>sigildex check</code><span class="d">Verify the copy that will actually run. A mismatch exits 2.</span></li>
         <li><code>sigildex diff</code><span class="d">Explain what changed, file by file, before you re-approve.</span></li>
       </ul>
+      <p class="codes-label">Exit codes</p>
       <ul class="codes">
         <li><b class="c0">0</b>match or identical</li>
         <li><b class="c2">2</b>drift or differ</li>
@@ -396,17 +382,11 @@ footer .type{flex-basis:100%;font-size:12.5px;color:var(--subtle);max-width:none
   </div>
 </section>
 
-<section id="positioning" class="band">
-  <div class="wrap">
-    <p class="statement reveal">Sigildex does not replace discovery, security scanning, or human review. It connects them into a durable workflow by recording exactly what was approved and detecting when that artifact changes.</p>
-  </div>
-</section>
-
 <section id="demo" class="sec">
   <div class="wrap">
-    <p class="kicker"><span class="idx">01</span> The gap</p>
+    <p class="kicker"><span class="idx">01</span></p>
     <h2>You approved a skill. Then it changed.</h2>
-    <p class="sec-desc">You read version 1 and approved it. Version 2 adds an executable script and rewrites the instructions to call it, and nothing in the install path tells you.</p>
+    <p class="sec-desc">You read version 1 and approved it. Version 2 adds an executable script and rewrites the instructions to call it — and nothing in the install path tells you.</p>
     <div class="term reveal">
       <div class="term-bar">
         <span class="dot"></span><span class="dot"></span><span class="dot"></span>
@@ -445,172 +425,105 @@ Review the changes and re-lock only after approving them.
 <span class="cmd">$ echo $?</span>
 <span class="x2">2</span></pre>
     </div>
-    <p class="note">An update added an executable script where the approved version had none, and rewrote the instructions to call it. <code>sigildex diff</code> shows exactly what changed. A human decides whether to approve it.</p>
-    <p class="note">The transcript above is run from the repository's <code>examples/version-drift</code> directory; in a real project you store records at <code>.sigildex/approvals/&lt;approval-id&gt;.lock.json</code> and pass <code>--artifact-path</code> when the reviewed copy sits outside the project.</p>
+    <p class="note"><code>check</code> caught it and exited 2; <code>sigildex diff</code> lists each change per file, and a human decides whether to re-approve. Real output from <code>examples/version-drift</code> — in a project, records live in <code>.sigildex/approvals/</code>.</p>
   </div>
 </section>
 
 <section id="workflow" class="sec band">
   <div class="wrap">
-    <p class="kicker"><span class="idx">02</span> End to end</p>
+    <p class="kicker"><span class="idx">02</span></p>
     <h2>The workflow</h2>
-    <p class="sec-desc">Ten stages, from finding a skill to re-approving an update. Sigildex's commands do the work in four of them; the rest is documented.</p>
-    <div class="spine reveal"><p>Discover → stage → inspect/scan → human review → record approval → install &amp; verify → detect update → quarantine → diff → re-approve</p></div>
+    <p class="sec-desc">Other tools find and scan a skill; you review it. Sigildex records what you approved and tells you when the installed copy stops matching.</p>
     <ol class="steps">
     <li class="step">
+      <span class="tag">Other tools</span>
       <span class="n">01</span>
       <h3>Discover</h3>
-      <p>Find a candidate with the tools you already use.</p>
-      <span class="who">Not Sigildex</span>
+      <p>Find a candidate.</p>
+      <p class="eg">GitHub CLI <a href="https://cli.github.com/"><code>gh skill</code></a>, <a href="https://github.com/vercel-labs/skills">Vercel Skills CLI</a>, publisher catalogs.</p>
     </li>
     <li class="step">
+      <span class="tag">Other tools</span>
       <span class="n">02</span>
-      <h3>Stage</h3>
-      <p>Copy it into quarantine outside every active skills directory. Run nothing.</p>
-      <span class="who">Documented</span>
+      <h3>Quarantine &amp; scan</h3>
+      <p>Copy it outside every active skills directory and run nothing. Get evidence: risky patterns, injection, secrets.</p>
+      <p class="eg"><a href="https://github.com/NVIDIA/SkillSpector">NVIDIA SkillSpector</a>, <a href="https://github.com/cisco-ai-defense/skill-scanner">Cisco AI Defense Skill Scanner</a>, <a href="https://github.com/snyk/agent-scan">Snyk Agent Scan</a>.</p>
     </li>
     <li class="step">
+      <span class="tag">You</span>
       <span class="n">03</span>
-      <h3>Inspect / scan</h3>
-      <p>Scanners produce evidence about the candidate, never a certification.</p>
-      <span class="who">Not Sigildex</span>
+      <h3>Review</h3>
+      <p>A person reads the skill and decides. A clean scan is evidence, not approval.</p>
+      <p class="eg">Checklist in the <a href="https://github.com/sigildex/sigildex/blob/main/docs/safe-skill-adoption.md#scanning-and-manual-review">adoption guide</a>.</p>
     </li>
-    <li class="step">
+    <li class="step ours">
+      <span class="tag">Sigildex</span>
       <span class="n">04</span>
-      <h3>Human review</h3>
-      <p>A person reads the skill and decides. Nothing automates this.</p>
-      <span class="who">Not Sigildex</span>
+      <h3>Record &amp; verify</h3>
+      <p>The step nothing else does: remember what you approved. <code>sigildex lock</code> records the approved bytes' identity in an approval record beside your code; after install, <code>sigildex check</code> verifies the copy your agent loads. Drift exits 2 — a preflight or CI step stops there.</p>
     </li>
-    <li class="step ours">
+    <li class="step">
+      <span class="tag">Your tools + Sigildex</span>
       <span class="n">05</span>
-      <h3>Record approval</h3>
-      <p><code>sigildex lock</code> writes the approved bytes to an approval record.</p>
-      <span class="who">Sigildex</span>
-    </li>
-    <li class="step ours">
-      <span class="n">06</span>
-      <h3>Install &amp; verify</h3>
-      <p><code>sigildex check</code> the copy that will run. A mismatch exits 2; your preflight or CI gate stops there.</p>
-      <span class="who">Sigildex</span>
-    </li>
-    <li class="step">
-      <span class="n">07</span>
-      <h3>Detect update</h3>
-      <p>Read-only checks, on demand or on your schedule. Never automatic.</p>
-      <span class="who">Documented</span>
-    </li>
-    <li class="step">
-      <span class="n">08</span>
-      <h3>Quarantine the update</h3>
-      <p>Stage the update outside the active install, which stays untouched.</p>
-      <span class="who">Documented</span>
-    </li>
-    <li class="step ours">
-      <span class="n">09</span>
-      <h3>Diff</h3>
-      <p><code>sigildex diff</code> reports what changed, per file, by class.</p>
-      <span class="who">Sigildex</span>
-    </li>
-    <li class="step ours">
-      <span class="n">10</span>
-      <h3>Re-approve</h3>
-      <p>A human reads the diff; CI and code owners keep it human.</p>
-      <span class="who">Sigildex + repo controls</span>
+      <h3>Update</h3>
+      <p>When you or CI ask, your installer reports whether upstream moved (<a href="https://cli.github.com/manual/gh_skill_update"><code>gh skill update --dry-run</code></a> is one read-only way). Quarantine the new version; <code>sigildex diff</code> shows what changed per file; a human re-approves; <code>lock</code> again, install, <code>check</code> again.</p>
     </li>
     </ol>
+    <p class="loop reveal"><span>discover → quarantine → scan → review → lock → install → check</span> <span class="cyc" role="img" aria-label="then, on each update">↻</span> <span>update → quarantine → diff → review → lock → install → check</span></p>
+    <p class="note">The stage-by-stage guide, with quarantine and CI: <a href="https://github.com/sigildex/sigildex/blob/main/docs/safe-skill-adoption.md"><code>docs/safe-skill-adoption.md</code></a>.</p>
   </div>
 </section>
 
-<section id="ecosystem" class="sec">
+<section id="agent" class="sec">
   <div class="wrap">
-    <p class="kicker"><span class="idx">03</span> Neighbours</p>
-    <h2>Where Sigildex sits</h2>
-    <p class="sec-desc">Each stage is someone else's job. The gap is between them: what you approved is no longer what is installed, and nobody noticed.</p>
-    <ul class="eco">
-    <li>
-      <p class="stage">Discovery</p>
-      <p class="what">Find candidate skills.</p>
-      <p class="eg">GitHub CLI <a href="https://cli.github.com/"><code>gh skill</code></a>, <a href="https://github.com/vercel-labs/skills">Vercel Skills CLI</a>, publisher catalogs</p>
-      <p class="tag">Not Sigildex</p>
-    </li>
-    <li>
-      <p class="stage">Scanning</p>
-      <p class="what">Produce evidence about a candidate — patterns, injection risk, secrets.</p>
-      <p class="eg"><a href="https://github.com/NVIDIA/SkillSpector">NVIDIA SkillSpector</a>, <a href="https://github.com/cisco-ai-defense/skill-scanner">Cisco AI Defense Skill Scanner</a>, <a href="https://github.com/snyk/agent-scan">Snyk Agent Scan</a></p>
-      <p class="tag">Not Sigildex</p>
-    </li>
-    <li>
-      <p class="stage">Human review</p>
-      <p class="what">Decide whether the skill belongs in your environment.</p>
-      <p class="eg">You, with the checklist in the adoption guide</p>
-      <p class="tag">Not Sigildex</p>
-    </li>
-    <li class="here">
-      <p class="stage">Approval record</p>
-      <p class="what">Record exactly what was approved, and detect when it changes.</p>
-      <p class="eg"><code>sigildex lock</code> · <code>check</code> · <code>diff</code></p>
-      <p class="tag">This project</p>
-    </li>
-    <li>
-      <p class="stage">Installation &amp; updates</p>
-      <p class="what">Put skills on disk; report when upstream moves.</p>
-      <p class="eg">Package managers and skill installers, <a href="https://cli.github.com/manual/gh_skill_update"><code>gh skill update --dry-run</code></a></p>
-      <p class="tag">Not Sigildex</p>
-    </li>
-    </ul>
-  </div>
-</section>
-
-<section id="agent" class="sec band">
-  <div class="wrap">
-    <p class="kicker"><span class="idx">04</span> For agents</p>
+    <p class="kicker"><span class="idx">03</span></p>
     <h2>Use it with your agent</h2>
-    <p class="sec-desc">Sigildex ships as an Agent Skill. Drop it into the directory your agent loads skills from and it walks this workflow with you. The skill instructs the agent to stage candidates in quarantine, to run nothing bundled with them, to summarize scanner output, and to stop for an explicit human decision before any baseline is recorded or anything is installed. It is instruction text, followed by a compliant agent: these rules reduce risk; they are not a security boundary.</p>
-    <p class="sec-desc">There are two front doors, and both are plain text, need no JavaScript, and mirror the repository copy byte for byte.</p>
+    <p class="sec-desc">Sigildex ships as an Agent Skill. Put it where your agent loads skills and the agent follows the workflow above: stage candidates in quarantine, run nothing bundled with them, summarize scanner output, and stop for a human decision before anything is recorded or installed. These are instructions a compliant agent follows — they reduce risk; they are not a security boundary.</p>
     <div class="entries">
       <a class="entry reveal" href="https://sigildex.ai/SKILL.md">
         <span class="nm">Agent Skill</span>
         <span class="pa">https://sigildex.ai/SKILL.md</span>
-        <span class="ds">The workflow itself, as a skill your agent loads and follows.</span>
+        <span class="ds">The workflow as a skill your agent loads and follows.</span>
       </a>
       <a class="entry reveal" href="https://sigildex.ai/llms.txt">
-        <span class="nm">Machine-readable front door</span>
+        <span class="nm">llms.txt</span>
         <span class="pa">https://sigildex.ai/llms.txt</span>
-        <span class="ds">Routing and limits. Point an agent here and it can navigate the whole project unaided.</span>
+        <span class="ds">Routing and limits; an agent can navigate the whole project from here.</span>
       </a>
     </div>
-    <p class="note">The same Agent Skill lives in the repository at <a href="https://github.com/sigildex/sigildex/blob/main/skills/sigildex/SKILL.md"><code>skills/sigildex/SKILL.md</code></a> and the package metadata is at <a href="https://registry.npmjs.org/sigildex">registry.npmjs.org/sigildex</a>.</p>
   </div>
 </section>
 
-<section id="links" class="sec">
+<section id="links" class="sec band">
   <div class="wrap">
-    <p class="kicker"><span class="idx">05</span> Documentation</p>
-    <h2>Links</h2>
+    <p class="kicker"><span class="idx">04</span></p>
+    <h2>Docs</h2>
     <ul class="docs">
     <li><a href="https://github.com/sigildex/sigildex"><span class="nm">Repository</span><span class="ds">Source, examples, and issues.</span></a></li>
     <li><a href="https://github.com/sigildex/sigildex/blob/main/README.md"><span class="nm">README quickstart</span><span class="ds">Install, lock, check, diff in a few minutes.</span></a></li>
-    <li><a href="https://github.com/sigildex/sigildex/blob/main/docs/safe-skill-adoption.md"><span class="nm">Safe skill adoption guide</span><span class="ds">The whole workflow, written out, with the review checklist.</span></a></li>
-    <li><a href="https://github.com/sigildex/sigildex/blob/main/docs/identity-spec.md"><span class="nm">Identity specification</span><span class="ds">What the manifest covers, how the root digest is computed.</span></a></li>
-    <li><a href="https://github.com/sigildex/sigildex/blob/main/docs/threat-model.md"><span class="nm">Threat model</span><span class="ds">What an approval record defends against, and what it does not.</span></a></li>
-    <li><a href="https://github.com/sigildex/sigildex/blob/main/skills/sigildex/SKILL.md"><span class="nm">Agent Skill</span><span class="ds">The workflow as instructions your agent loads and follows.</span></a></li>
-    <li><a href="https://github.com/sigildex/sigildex/blob/main/docs/ci/approval-check.yml"><span class="nm">CI example</span><span class="ds">A workflow that fails a pull request on unreviewed drift.</span></a></li>
+    <li><a href="https://github.com/sigildex/sigildex/blob/main/docs/safe-skill-adoption.md"><span class="nm">Safe skill adoption guide</span><span class="ds">The whole workflow, with the review checklist.</span></a></li>
+    <li><a href="https://github.com/sigildex/sigildex/blob/main/docs/identity-spec.md"><span class="nm">Identity specification</span><span class="ds">The normative contract: manifest scope, root digest.</span></a></li>
+    <li><a href="https://github.com/sigildex/sigildex/blob/main/docs/threat-model.md"><span class="nm">Threat model</span><span class="ds">Defended threats, residual risks, trust boundaries.</span></a></li>
+    <li><a href="https://github.com/sigildex/sigildex/blob/main/docs/ci/approval-check.yml"><span class="nm">CI example</span><span class="ds">A workflow that fails a pull request when a skill and its approval record disagree.</span></a></li>
+    </ul>
+    <p class="docs-group">Background</p>
+    <ul class="docs">
     <li><a href="https://github.com/sigildex/sigildex/blob/main/docs/case-study.md"><span class="nm">Architecture case study</span><span class="ds">Building an agent-first system, and what it taught.</span></a></li>
-    <li><a href="https://github.com/sigildex/sigildex/blob/main/docs/postmortem.md"><span class="nm">Postmortem</span><span class="ds">What the crawl and rebuild actually cost.</span></a></li>
+    <li><a href="https://github.com/sigildex/sigildex/blob/main/docs/postmortem.md"><span class="nm">Postmortem</span><span class="ds">Why the earlier hosted index was retired, and what it cost.</span></a></li>
     </ul>
   </div>
 </section>
 
-<section id="status" class="sec band">
+<section id="limits" class="sec">
   <div class="wrap">
-    <p class="kicker"><span class="idx">06</span> Honest limits</p>
-    <h2>Where this stands</h2>
-    <div class="prose">
-      <p>Sigildex is v0.1.1, published to npm and open source under the MIT license. It runs on macOS and Linux, reads only the paths you give it, and makes no network calls. The <a href="https://github.com/sigildex/sigildex/blob/main/docs/identity-spec.md">identity specification</a> is the normative contract and the implementation follows it; the schemas, the threat model, and the CI workflow are published alongside it.</p>
-      <p>There is no hosted index, no discovery API, and no publisher-monitoring service. Update detection is read-only and something you or your CI runs on purpose — never automatic.</p>
-      <p>Sigildex does not certify that a skill is safe, and it does not verify where a skill came from. An approval record is a review snapshot: it records the exact bytes you designated as approved, and tells you when they change. Pair it with security scanning and human review appropriate to your environment.</p>
-      <p>It also does not police your approvals directory. <code>lock</code> refuses to write a record under any name but <code>&lt;approval-id&gt;.lock.json</code>. <code>check</code> compares one artifact against one record. But nothing in v0.1 scans a folder of approvals for duplicate ids, duplicate artifact paths, or records left behind without their artifact. Code owners and review cover that.</p>
-    </div>
+    <p class="kicker"><span class="idx">05</span></p>
+    <h2>Limits</h2>
+    <ul class="limits">
+      <li><strong>Not a safety verdict.</strong> A record proves the approved bytes are unchanged; it does not certify a skill is safe or verify where it came from — pair it with scanning and human review.</li>
+      <li><strong>Not a service.</strong> No hosted index, discovery API, or publisher monitoring. Upstream update checks belong to your installer and run only when you ask; <code>check</code> compares the installed copy with its record, nothing more.</li>
+      <li><strong>Not a directory audit.</strong> <code>check</code> compares one artifact against one record; duplicate ids, duplicate artifact paths, or orphaned records are for code owners and pull-request review to catch.</li>
+      <li><strong>Not the spec.</strong> The identity specification is the normative contract; schemas, threat model, and CI workflow are published beside it.</li>
+    </ul>
   </div>
 </section>
 
@@ -619,12 +532,11 @@ Review the changes and re-lock only after approving them.
 <footer>
   <div class="wrap">
     <svg class="mark" width="26" height="26" viewBox="0 0 400 400" fill="currentColor" fill-rule="evenodd" aria-hidden="true" focusable="false"><path d="m200 71.6l-28.2 56.4h14.2v1.5l-1.4 7.1-1.3 .9-8.5 2.5-9.2 4.4-6.3 3.8h-1.1l-33.7-24.4h-.5v-.6h-.8l23.8 36.1-4.7 5.8-3.1 5-4.1 8.3-2.4 6.7-1 .7-6.8 1.4-27.9 7-17.4 4.8-2.4 .3-.3 .8 .9 .6 2.3 .3 33.3 8.8 18.5 4.4 3.3 10.2 3.8 7.9v1l-16.9 17 10.9 11v1.1l-6.1 5.9-3.6 4.6-8.9 12.7 14-9.7 2.5-2 7-6.9h.7l60.2 60.2 1.2 .8 1.2-.8 60.2-60.2h.7l7 6.9 2.5 2 14 9.7-8.9-12.7-3.6-4.6-6.1-5.9v-1.1l10.9-11-16.9-17v-1l3.8-7.9 3.3-10.2 18.5-4.4 33.3-8.8 2.3-.3 .9-.6-.3-.8-2.4-.3-17.4-4.8-27.9-7-6.8-1.4-1-.7-2.4-6.7-4.1-8.3-3.1-5-4.7-5.8 23.8-36.1h-.8v.6h-.5l-33.7 24.4h-1.1l-6.3-3.8-9.2-4.4-8.5-2.5-1.3-.9-1.4-7.1v-1.5h14.2zm0 147.5l-2.9 .1-1.5-.2-2.2-.8-3.6-1.7-.6-1 7.1-7 1.6 .4h2.1 2.1l1.6-.4 7.1 7-.6 1-3.6 1.7-2.2 .8-1.5 .2zm0-28.2h-1.6l-2.2 .4-6.9-6.9 .5-1.1 2.6-1.2 2-.9 3.5-.7h2.1 2.1l3.5 .7 2 .9 2.6 1.2 .5 1.1-6.9 6.9-2.2-.4zm-56.8 70.8l10.9-11 35.7 35.7 .9 1.5 6 27.3zm60.1 53.5l6-27.3 .9-1.5 35.7-35.7 10.9 11zm-7-34.7l-1-1.4-.6-3.7-11.5-50.5-.4-2.4 .5-1.3 1.1-.2 4 2.6 2.7 1.2 5.1 1.4 .3 .8v53.3zm7.2-.2v-53.3l.3-.8 5.1-1.4 2.7-1.2 4-2.6 1.1 .2 .5 1.3-.4 2.4-11.5 50.5-.6 3.7-1 1.4zm-27.2-51.8l.6 .2 .6 1.9 7.5 33.5 2 7.7v1.4h-.6l-27.3-27.4zm64.6 17.3l-27.3 27.4h-.6v-1.4l2-7.7 7.5-33.5 .6-1.9 .6-.2zm-102.5 10.7l-.9-.5-5.5-5.5 .6-1.1 14.8-14.8 .6-1-.9-1.2-3-5.3-1.9-3.9-2.2-6.9 .7-.3 2.5 .8 29.1 6.1-33.5 33.5zm122.8-.1l-33.5-33.5 29.1-6.1 2.5-.8 .7 .3-2.2 6.9-1.9 3.9-3 5.3-.9 1.2 .6 1 14.8 14.8 .6 1.1-5.5 5.5-.9 .5zm-142-52.9l1.2-.3 52.9 .2 .7 .9v1.2l2.3 6.4 2.5 3.6v.7l-.8 .8h-1.4l-55.5-12.3zm159.7 1.2l-55.5 12.3h-1.4l-.8-.8v-.7l2.5-3.6 2.3-6.4v-1.2l.7-.9 52.9-.2 1.2 .3zm-95.1 5.8l-1.5-2.5-1.3-3.2-.6-5 .6-4.9 1.2-3.1 1.5-2.4 .8-.2 7 7.1-.4 1.3v4.8l.4 1.1-6.9 7zm31.6 0l-6.9-7 .4-1.1v-4.8l-.4-1.3 7-7.1 .8 .2 1.5 2.4 1.2 3.1 .6 4.9-.6 5-1.3 3.2-1.5 2.5zm-95.7-14.4l.8-.8 46.3-10.3 9.6-2h1.8l.6 .6v1.2h-.5l-3.1 5.8-1.2 4v1.1l-.7 .6-52.9 .2zm159.9 .4l-52.9-.2-.7-.6v-1.1l-1.2-4-3.1-5.8h-.5v-1.2l.6-.6h1.8l9.6 2 46.3 10.3 .8 .8zm-138.6-13v-1.4l4.1-8.5 5.4-7.8h1.1l8.7 12.9-.3 1-2.6 .3-3.5 1zm105.1-2.5l-3.5-1-2.6-.3-.3-1 8.7-12.9h1.1l5.4 7.8 4.1 8.5v1.4zm-62.3-2.2l-.9-.7 .1-2.1 6-26.6 5-25.5 .1-2.8-10.6-.2-.3-.4 13.3-26.6v79.1l-1 1h-1.6l-3.4 1.2-4 2-1.9 1.6zm31.6 0l-1.9-1.6-4-2-3.4-1.2h-1.6l-1-1v-79.1l13.3 26.6-.3 .4-10.6 .2 .1 2.8 5 25.5 6 26.6 .1 2.1-.9 .7zm-65.7-28.2l27.3 19.7v1.8l-1.1 3.8-1.1 .6-5.2 1.1-1.5 .2-.7-.7zm82.9 26.5l-.7 .7-1.5-.2-5.2-1.1-1.1-.6-1.1-3.8v-1.8l27.3-19.7zm-50.3-32.2l.5 .6-4 17.7-13.3-9.6v-.8l6.6-4 5.8-2.5zm39.8 1.4l5.8 2.5 6.6 4v.8l-13.3 9.6-4-17.7 .5-.6z"/></svg>
-    <p>Sigildex is open source under the MIT license. The repository is the canonical source of truth; this page is a front door, generated from the repository's own files.</p>
+    <p>Generated from the repository's own files; the repository is the source of truth.</p>
     <div class="ends">
       <a href="https://github.com/sigildex/sigildex">Repository</a>
-      <a href="https://github.com/sigildex/sigildex/blob/main/README.md">README</a>
-      <a href="https://github.com/sigildex/sigildex/blob/main/SECURITY.md">Security policy</a>
-      <a href="https://sigildex.ai/llms.txt">llms.txt</a>
+      <a href="https://github.com/sigildex/sigildex/blob/main/SECURITY.md">Security</a>
+      <a href="https://www.npmjs.com/package/sigildex">npm</a>
     </div>
     <p class="type">Type: Geist and Geist Mono, copyright 2024 The Geist Project Authors, SIL Open Font License 1.1 — <a href="https://sigildex.ai/fonts/GEIST-OFL.txt">license</a>.</p>
   </div>

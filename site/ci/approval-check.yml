@@ -1,29 +1,15 @@
-# Skill approval check — copy into .github/workflows/ in the repository that
-# holds the skill and its approval record. Set the three values under `env`.
-#
-# What it proves, for the ONE skill/record pair named in `env`: the skill
-# directory and its approval record are consistent with each other, and the
-# trusted baseline they are compared against was consistent too.
-#
-# What it cannot prove: that the change is a good idea. That is CODEOWNERS plus
-# branch protection — see README.md next to this file. It also does not audit
-# the approvals directory: duplicate approval IDs, duplicate artifact paths, and
-# locks left behind without their artifact are not detected here, or anywhere
-# else in v0.1. Keeping the store clean is a review responsibility.
+# Skill approval check — copy into .github/workflows/; set the three `env` values.
+# Proves: the ONE skill/record pair in `env` is self-consistent, and so was the base.
+# Cannot prove: that the change should be approved (CODEOWNERS + branch protection), and it audits no approvals directory.
+# Rationale for every block: README.md next to this file.
 name: Skill approval check
 
-# pull_request only. Never pull_request_target: that runs with a writable token
-# in the base repository's context while checking out untrusted PR content.
-#
-# On pull_request, GitHub runs this file as the pull request writes it, so a
-# pull request that edits this workflow is exactly as approval-affecting as one
-# that edits an approval record. Put `.github/workflows/**` under CODEOWNERS
-# alongside the approvals directory — see README.md next to this file.
+# pull_request, never pull_request_target; this file runs as the pull request
+# writes it, so put `.github/workflows/**` under CODEOWNERS — see README.md.
 on:
   pull_request:
 
-# Read-only, repository-scoped, and nothing else. This workflow needs no
-# secrets and no write permission of any kind.
+# Read-only; no secrets, no write permission — see README.md.
 permissions:
   contents: read
 
@@ -31,7 +17,7 @@ env:
   # The skill directory and its approval record, repository-relative.
   SKILL_DIR: .claude/skills/log-summarizer
   APPROVAL: .sigildex/approvals/log-summarizer.lock.json
-  # Pin the tool. Update deliberately, the same way you update any dependency.
+  # Pin the tool; update it like any other dependency.
   SIGILDEX_VERSION: 0.1.1
 
 jobs:
@@ -50,23 +36,16 @@ jobs:
 
       - name: Install the approval tool outside the workspace
         env:
-          # Block dependency lifecycle scripts during the tool install.
+          # No dependency lifecycle scripts during the tool install.
           NPM_CONFIG_IGNORE_SCRIPTS: "true"
         run: |
           set -euo pipefail
-          # Deliberately installed OUTSIDE the pull request checkout, into a
-          # directory the pull request cannot write. Package resolution that
-          # starts in the workspace is attacker-controlled: `npx sigildex@X`
-          # run there prefers a `node_modules/sigildex` the pull request itself
-          # committed whenever its version satisfies X, and never reaches the
-          # registry — so the artifact under review would supply the program
-          # that judges it. Blocking lifecycle scripts does not help; the
-          # shadowed package is the command, not a script hook.
+          # Installed OUTSIDE the checkout: resolution that starts in the
+          # workspace would prefer a package the pull request committed — see README.md.
           TOOL="$RUNNER_TEMP/sigildex-tool"
           mkdir -p "$TOOL"
-          # A private package.json pins the install root, so npm cannot walk up
-          # into some other project. Entering the directory also keeps npm from
-          # reading an .npmrc the pull request committed at the workspace root.
+          # A private package.json pins the install root; entering the directory
+          # keeps npm from reading a committed .npmrc.
           printf '%s\n' '{"name":"sigildex-tool-install","private":true}' > "$TOOL/package.json"
           cd "$TOOL"
           npm install --no-save --ignore-scripts --no-audit --no-fund "sigildex@$SIGILDEX_VERSION"
@@ -75,16 +54,14 @@ jobs:
 
       - name: Materialize the base revision
         env:
-          # The actual base commit of this pull request, from the event payload.
-          # Never origin/main: the PR may target another branch, and the branch
-          # may have moved since the PR was opened.
+          # The base commit from the event payload, never origin/main — see README.md.
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           set -euo pipefail
           # The default checkout is shallow and may not contain the base commit.
           git fetch --no-tags --depth=1 origin "$BASE_SHA"
-          # A detached worktree gives the base tree as plain files, with no
-          # branch switch and no effect on the checked-out PR tree.
+          # A detached worktree gives the base tree as plain files without
+          # touching the checked-out pull request tree.
           git worktree add --detach "$RUNNER_TEMP/base" "$BASE_SHA"
 
       - name: Check approval consistency
@@ -93,12 +70,11 @@ jobs:
         run: |
           set -euo pipefail
           BASE="$RUNNER_TEMP/base"
-          # Absolute path into the install above. Never a bare command name and
-          # never `npx` from this working directory: both resolve through the
-          # pull request's own tree.
+          # Absolute path into the install above; a bare name or `npx` would
+          # resolve through the pull request's own tree — see README.md.
           SIGILDEX="$RUNNER_TEMP/sigildex-tool/node_modules/.bin/sigildex"
-          # Nothing from the candidate skill is ever executed, sourced, or
-          # installed here — it is only read and hashed by the tool.
+          # Nothing from the candidate skill is executed, sourced, or installed;
+          # it is only read and hashed.
           SUMMARY="${GITHUB_STEP_SUMMARY}"
           echo "### Skill approval check" >> "$SUMMARY"
 
@@ -108,9 +84,8 @@ jobs:
           [ -x "$SIGILDEX" ] \
             || fail "The approval tool is not installed at the expected path. The install step must run before this one."
 
-          # The pull_request event supplies the base commit. On any other
-          # trigger it is empty, and `git diff ""` below would fail in a way
-          # that reads as "changed" — a pass built on nothing. Refuse instead.
+          # Only pull_request supplies a base commit; an empty one would make
+          # `git diff ""` read as "changed" — a pass built on nothing. Refuse.
           git rev-parse --verify --quiet "${BASE_SHA:-}^{commit}" > /dev/null \
             || fail "BASE_SHA is not a commit in this checkout. This workflow requires the pull_request trigger."
 
@@ -123,11 +98,9 @@ jobs:
           git diff --quiet "$BASE_SHA" -- "$SKILL_DIR" && skill_changed=no || skill_changed=yes
           git diff --quiet "$BASE_SHA" -- "$APPROVAL"  && lock_changed=no  || lock_changed=yes
 
-          # Prove the baseline before anything is decided against it, INCLUDING
-          # the outcomes that end this job successfully. A removal, a lock-only
-          # change and a no-op are all statements about the base revision; if
-          # the base was already inconsistent, none of them mean anything, so
-          # this runs before any branch that can exit 0.
+          # Prove the base before any outcome is decided, INCLUDING the passing
+          # ones: a removal, a record-only change and a no-op are all statements
+          # about the base revision — see README.md.
           if [ "$base_skill" = yes ] && [ "$base_lock" = yes ]; then
             base_status=0
             "$SIGILDEX" check "$BASE/$SKILL_DIR" --against "$BASE/$APPROVAL" > /dev/null || base_status=$?
@@ -139,8 +112,8 @@ jobs:
             esac
           fi
 
-          # Removal, and the partial states around it. A skill and its approval
-          # record must arrive and depart together.
+          # Removal and the partial states around it: a skill and its record
+          # arrive and depart together.
           if [ "$head_skill" = no ] && [ "$head_lock" = no ]; then
             if [ "$base_skill" = yes ] && [ "$base_lock" = yes ]; then
               note "Skill and approval record removed together."; exit 0
@@ -152,9 +125,8 @@ jobs:
           if [ "$head_skill" = no ]; then fail "Approval record $APPROVAL has no artifact at $SKILL_DIR."; fi
           if [ "$head_lock" = no ]; then fail "Skill $SKILL_DIR has no approval record at $APPROVAL."; fi
 
-          # Informational approval delta for the reviewer. Its exit status is
-          # 0 (identical) or 2 (differ); every other status means a walk failed,
-          # and a delta from a failed walk is not a delta.
+          # Informational approval delta for the reviewer: exit 0 (identical) or
+          # 2 (differ); any other status means the walk failed and there is no delta.
           if [ "$base_skill" = yes ]; then
             diff_status=0
             "$SIGILDEX" diff "$BASE/$SKILL_DIR" "$SKILL_DIR" --json > "$RUNNER_TEMP/delta.json" || diff_status=$?
@@ -165,8 +137,7 @@ jobs:
           fi
 
           # The gate: does the candidate skill match the candidate record?
-          # Skill changed, record unchanged -> 2. Record changed, skill not
-          # matching it -> 2. Changed consistently -> 0. Neither changed -> 0.
+          # Consistent or unchanged -> 0; skill or record changed alone -> 2.
           check_status=0
           "$SIGILDEX" check "$SKILL_DIR" --against "$APPROVAL" || check_status=$?
           case "$check_status" in
@@ -176,15 +147,11 @@ jobs:
             *) fail "sigildex check could not complete (exit $check_status)." ;;
           esac
 
-          # Category counts only. Skill content — paths, frontmatter, script
-          # text — is never written to the job summary: it is attacker-supplied
-          # and the summary renders Markdown. Counts are advisory; the exit
-          # codes above are the gate.
+          # Category counts only, never skill content: the summary renders
+          # Markdown. Counts are advisory; the exit codes above are the gate.
           if [ -s "${RUNNER_TEMP}/delta.json" ]; then
-            # Counted by parsing the JSON, never by scanning its text: the
-            # report embeds the skill's own frontmatter verbatim, so a
-            # frontmatter key named `added` or `removed` would otherwise steer
-            # a text scan. Node is already here — setup-node ran above.
+            # Parsed from the JSON, not scanned from its text: the report embeds
+            # the skill's frontmatter verbatim — see README.md.
             counts=$(node -e '
               const report = JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"));
               const size = (key) => (Array.isArray(report[key]) ? report[key].length : 0);

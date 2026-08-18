@@ -114,6 +114,25 @@ describe("served documents are copies, not forks", () => {
     }
   });
 
+  it("serves every Agent Skill reference file beside the served SKILL.md", async () => {
+    // `/SKILL.md` links to `references/<name>.md` relatively, so each file the
+    // skill ships must be served at `/references/<name>.md`, byte for byte, and
+    // listed in the sitemap. The five references SKILL.md links to must exist;
+    // an empty or missing directory is a failure, not a vacuous pass.
+    const directory = join(repositoryRoot, "skills", "sigildex", "references");
+    const names = (await readdir(directory)).filter((name) => name.endsWith(".md")).sort();
+    expect(names).toEqual(["ci.md", "cli-reference.md", "revoke.md", "scanners.md", "update-check.md"]);
+    const sitemap = await readFile(join(committedSite, "sitemap.xml"), "utf8");
+    for (const name of names) {
+      const original = await readFile(join(directory, name));
+      const served = await readFile(join(committedSite, "references", name));
+      expect(served.equals(original), `references/${name} differs from its source`).toBe(true);
+      expect(sitemap).toContain(`<loc>${ORIGIN}/references/${name}</loc>`);
+    }
+    const servedReferences = (await listFiles(committedSite)).filter((path) => path.startsWith("references/"));
+    expect(servedReferences).toEqual(names.map((name) => `references/${name}`).sort());
+  });
+
   it("serves every published JSON Schema", async () => {
     const schemas = (await readdir(join(repositoryRoot, "schema"))).filter((name) => name.endsWith(".schema.json"));
     expect(schemas.length).toBeGreaterThan(0);
@@ -134,7 +153,11 @@ describe("every documented site URL resolves to a file", () => {
   for (const [label, path] of sources) {
     it(`has no dead ${label} link`, async () => {
       const text = await readFile(path, "utf8");
-      const urls = text.match(new RegExp(`${ORIGIN}[^\\s"'<>)\\]]*`, "g")) ?? [];
+      // A URL at the end of a clause carries the sentence's punctuation, which
+      // is not part of the path.
+      const urls = (text.match(new RegExp(`${ORIGIN}[^\\s"'<>)\\]]*`, "g")) ?? []).map((url) =>
+        url.replace(/[.,;:]+$/, ""),
+      );
       expect(urls.length).toBeGreaterThan(0);
 
       const present = new Set(await listFiles(committedSite));
@@ -298,39 +321,41 @@ describe("the front page", () => {
 
   it("carries the headline and the description", () => {
     expect(html).toContain("Know what changed in an Agent Skill before you trust the update.");
-    // The description says what the tool reports — files, and how they changed.
+    // The description says what the tool reports — files, and when they drift.
     // `diff` classifies files; it says nothing about capabilities.
     expect(html).toContain(
-      "Sigildex is an open-source, local workflow for recording the exact Agent Skill you reviewed, detecting when the installed bytes drift from it, and showing reviewers exactly which files changed and how.",
+      "Sigildex is a small open-source CLI. It fingerprints the exact bytes of an Agent Skill a human approved and tells you, file by file, when the installed copy drifts.",
     );
     expect(html).not.toMatch(/capabilit/i);
-    expect(html).toContain(
-      "It runs without an API, account, database, or LLM. Sigildex complements security scanners; it does not certify that a skill is safe.",
-    );
+    // The facts line carries the "runs locally" claim; the honesty claim lives
+    // in Limits, not above the fold.
+    expect(html).toContain("runs locally — no server, account, database, or LLM · no network calls, no telemetry");
   });
 
-  it("carries all eight sections and nothing more", () => {
+  it("carries all six sections and nothing more", () => {
     const anchors: Array<[string, string]> = [
       ["overview", "Approval records for Agent Skills"],
-      ["positioning", "Sigildex does not replace discovery, security scanning, or human review."],
       ["demo", "You approved a skill. Then it changed."],
       ["workflow", "The workflow"],
-      ["ecosystem", "Where Sigildex sits"],
       ["agent", "Use it with your agent"],
-      ["links", "Links"],
-      ["status", "Where this stands"],
+      ["links", "Docs"],
+      ["limits", "Limits"],
     ];
     for (const [id, text] of anchors) {
       expect(html, `missing section #${id}`).toContain(`id="${id}"`);
       expect(html, `missing anchor text for #${id}`).toContain(text);
     }
     expect(html.match(/<section /g) ?? []).toHaveLength(anchors.length);
+    // The nav reaches every section after the hero, in page order.
+    for (const id of ["workflow", "agent", "links", "limits"]) {
+      expect(html, `nav does not reach #${id}`).toContain(`href="#${id}"`);
+    }
   });
 
-  it("states the workflow as one line", () => {
-    expect(html).toContain(
-      "Discover → stage → inspect/scan → human review → record approval → install &amp; verify → detect update → quarantine → diff → re-approve",
-    );
+  it("states both loops as one mono line that can wrap at the ↻", () => {
+    expect(html).toContain("<span>discover → quarantine → scan → review → lock → install → check</span>");
+    expect(html).toContain("<span>update → quarantine → diff → review → lock → install → check</span>");
+    expect(html.match(/<p class="loop/g) ?? []).toHaveLength(1);
   });
 
   it("shows a real transcript with both verdicts and both exit codes", () => {
@@ -351,25 +376,26 @@ describe("the front page", () => {
     }
   });
 
-  it("walks all ten stages and marks the four a Sigildex command does the work in", () => {
-    // Stage names are stored as plain text and escaped at render, so the one
-    // with an ampersand appears here in its escaped form.
-    for (const stage of [
-      "Discover",
-      "Stage",
-      "Inspect / scan",
-      "Human review",
-      "Record approval",
-      "Install &amp; verify",
-      "Detect update",
-      "Quarantine the update",
-      "Diff",
-      "Re-approve",
-    ]) {
+  it("walks the five workflow cards, each with an owner tag, and highlights the one that is Sigildex", () => {
+    // Stage names are stored as plain text and escaped at render, so the ones
+    // with an ampersand appear here in their escaped form.
+    const cards: Array<[string, string]> = [
+      ["Discover", "Other tools"],
+      ["Quarantine &amp; scan", "Other tools"],
+      ["Review", "You"],
+      ["Record &amp; verify", "Sigildex"],
+      ["Update", "Your tools + Sigildex"],
+    ];
+    for (const [stage, owner] of cards) {
       expect(html, `missing stage ${stage}`).toContain(`<h3>${stage}</h3>`);
+      expect(html, `missing owner tag ${owner}`).toContain(`<span class="tag">${owner}</span>`);
     }
-    expect(html.match(/<li class="step/g) ?? []).toHaveLength(10);
-    expect(html.match(/<li class="step ours"/g) ?? []).toHaveLength(4);
+    expect(html.match(/<li class="step/g) ?? []).toHaveLength(5);
+    expect(html.match(/<li class="step ours"/g) ?? []).toHaveLength(1);
+    expect(html).toMatch(/<li class="step ours">\s*<span class="tag">Sigildex<\/span>/);
+    // Quarantine precedes scanning, and a clean scan is not approval.
+    expect(html).toContain("Copy it outside every active skills directory and run nothing.");
+    expect(html).toContain("A clean scan is evidence, not approval.");
   });
 
   it("shows how to install the published package", () => {
@@ -380,7 +406,8 @@ describe("the front page", () => {
   it("points agents at both machine-readable entry points", () => {
     expect(html).toContain(`href="${ORIGIN}/llms.txt"`);
     expect(html).toContain(`href="${ORIGIN}/SKILL.md"`);
-    expect(html).toContain("skills/sigildex/SKILL.md");
+    // Instruction text reduces risk; the page says so once and claims no more.
+    expect(html).toContain("they reduce risk; they are not a security boundary.");
   });
 
   it("links the repository, the guides, and the two long-form documents", () => {
@@ -401,15 +428,25 @@ describe("the front page", () => {
       "https://github.com/snyk/agent-scan",
       "https://github.com/sigildex/sigildex/blob/main/SECURITY.md",
       "https://github.com/sigildex/sigildex/blob/main/docs/threat-model.md",
-      "https://registry.npmjs.org/sigildex",
+      "https://github.com/sigildex/sigildex/blob/main/docs/ci/approval-check.yml",
     ]) {
       expect(html, `missing link ${url}`).toContain(`href="${url}"`);
     }
   });
 
-  it("claims nothing the tool does not do", () => {
-    expect(html).toContain("it does not certify that a skill is safe");
-    expect(html).toContain("There is no hosted index, no discovery API, and no publisher-monitoring service.");
+  it("claims nothing the tool does not do, and states each limit once", () => {
+    // The full honesty claim lives in Limits. The transcript's own printed line
+    // is the page's only other statement of it.
+    expect(html).toContain(
+      "it does not certify a skill is safe or verify where it came from — pair it with scanning and human review.",
+    );
+    expect(html).toContain("No hosted index, discovery API, or publisher monitoring.");
+    expect(html).toContain("compares one artifact against one record;");
+    expect(html.match(/<li><strong>Not /g) ?? []).toHaveLength(4);
+    expect(html.match(/does not certify/g) ?? []).toHaveLength(1);
+    // `check` compares an installed copy with its record; it detects no
+    // upstream update, and the page must not say it does.
+    expect(html).not.toMatch(/<code>check<\/code> (detects|watches|monitors)/i);
     for (const forbidden of [
       /security layer for all/i,
       /proves\s+(that\s+)?skills\s+are\s+safe/i,

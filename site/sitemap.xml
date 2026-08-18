@@ -13,4 +13,9 @@
   <url><loc>https://sigildex.ai/ci/approval-check.yml</loc></url>
   <url><loc>https://sigildex.ai/schema/approval-record.schema.json</loc></url>
   <url><loc>https://sigildex.ai/schema/diff-report.schema.json</loc></url>
+  <url><loc>https://sigildex.ai/references/ci.md</loc></url>
+  <url><loc>https://sigildex.ai/references/cli-reference.md</loc></url>
+  <url><loc>https://sigildex.ai/references/revoke.md</loc></url>
+  <url><loc>https://sigildex.ai/references/scanners.md</loc></url>
+  <url><loc>https://sigildex.ai/references/update-check.md</loc></url>
 </urlset>
