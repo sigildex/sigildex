@@ -141,7 +141,7 @@ report from `diff`. These are three different shapes — branch on the exit code
 before parsing. The drift report has no `schema_version` field; the diff report
 does.
 
-Install: requires Node.js 20 or later. `npm install -g sigildex@0.1.0`
+Install: requires Node.js 20 or later. `npm install -g sigildex@0.1.1`
 (published to npm as `sigildex`; package metadata at
 https://registry.npmjs.org/sigildex). If `sigildex` is not on PATH the shell
 reports exit `127` — a shell error, not a Sigildex verdict. The example trees

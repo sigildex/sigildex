@@ -9,7 +9,7 @@ deliberately, and noticing when what you approved changes.
 
 **Before you start.** Every `sigildex` command below needs the tool on your
 path, and Node.js 20 or later. v0.1 installs from npm as `sigildex`
-(`npm install -g sigildex@0.1.0`). Confirm it with `sigildex --version`: a
+(`npm install -g sigildex@0.1.1`). Confirm it with `sigildex --version`: a
 `command not found` and exit `127` means the tool is not on PATH, which is a
 shell error rather than a Sigildex verdict. The quickstart in
 [README.md](../README.md#five-minutes) clones the repository (which holds the

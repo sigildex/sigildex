@@ -719,7 +719,7 @@ ${styles(sansFont, monoFont)}</style>
       <p class="kicker r1">Approval records for Agent Skills</p>
       <h1 class="r2">Know what changed in an Agent Skill before you trust the update.</h1>
       <p class="lead r3">${description} It runs without an API, account, database, or LLM. Sigildex complements security scanners; it does not certify that a skill is safe.</p>
-      <p class="install r4"><span class="p">$</span> npm install -g sigildex@0.1.0</p>
+      <p class="install r4"><span class="p">$</span> npm install -g sigildex@0.1.1</p>
       <div class="cta r4">
         <a class="btn btn-primary" href="${BLOB}/docs/safe-skill-adoption.md">Read the guide</a>
         <a class="btn btn-ghost" href="${REPO}">View on GitHub</a>
@@ -826,7 +826,7 @@ ${docs}
     <p class="kicker"><span class="idx">06</span> Honest limits</p>
     <h2>Where this stands</h2>
     <div class="prose">
-      <p>Sigildex is v0.1.0, published to npm and open source under the MIT license. It runs on macOS and Linux, reads only the paths you give it, and makes no network calls. The <a href="${BLOB}/docs/identity-spec.md">identity specification</a> is the normative contract and the implementation follows it; the schemas, the threat model, and the CI workflow are published alongside it.</p>
+      <p>Sigildex is v0.1.1, published to npm and open source under the MIT license. It runs on macOS and Linux, reads only the paths you give it, and makes no network calls. The <a href="${BLOB}/docs/identity-spec.md">identity specification</a> is the normative contract and the implementation follows it; the schemas, the threat model, and the CI workflow are published alongside it.</p>
       <p>There is no hosted index, no discovery API, and no publisher-monitoring service. Update detection is read-only and something you or your CI runs on purpose — never automatic.</p>
       <p>Sigildex does not certify that a skill is safe, and it does not verify where a skill came from. An approval record is a review snapshot: it records the exact bytes you designated as approved, and tells you when they change. Pair it with security scanning and human review appropriate to your environment.</p>
       <p>It also does not police your approvals directory. <code>lock</code> refuses to write a record under any name but <code>&lt;approval-id&gt;.lock.json</code>. <code>check</code> compares one artifact against one record. But nothing in v0.1 scans a folder of approvals for duplicate ids, duplicate artifact paths, or records left behind without their artifact. Code owners and review cover that.</p>

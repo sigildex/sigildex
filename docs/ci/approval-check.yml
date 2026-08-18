@@ -32,7 +32,7 @@ env:
   SKILL_DIR: .claude/skills/log-summarizer
   APPROVAL: .sigildex/approvals/log-summarizer.lock.json
   # Pin the tool. Update deliberately, the same way you update any dependency.
-  SIGILDEX_VERSION: 0.1.0
+  SIGILDEX_VERSION: 0.1.1
 
 jobs:
   approval-check:

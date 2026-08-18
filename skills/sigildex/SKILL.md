@@ -69,7 +69,7 @@ and Linux; on Windows it exits `1` with an unsupported-platform error.
 --version`. It needs Node.js 20 or later and installs from npm:
 
 ```sh
-npm install -g sigildex@0.1.0
+npm install -g sigildex@0.1.1
 ```
 
 If the shell answers `command not found` and exit `127`, the tool is not on

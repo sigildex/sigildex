@@ -352,7 +352,7 @@ describe("the front page", () => {
   });
 
   it("shows how to install the published package", () => {
-    expect(html).toContain("npm install -g sigildex@0.1.0");
+    expect(html).toContain("npm install -g sigildex@0.1.1");
     expect(html).toContain('href="https://www.npmjs.com/package/sigildex"');
   });
 

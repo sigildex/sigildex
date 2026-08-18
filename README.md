@@ -22,7 +22,7 @@ There is no hosted index, no discovery API, and no publisher-monitoring service.
 ## Install
 
 ```sh
-npm install -g sigildex@0.1.0
+npm install -g sigildex@0.1.1
 ```
 
 Requires Node.js 20 or later, on macOS or Linux. Windows is out of scope in
