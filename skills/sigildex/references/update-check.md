@@ -65,24 +65,27 @@ compare the skill's path at the approved commit with the same path upstream. A
 blobless, checkout-less clone is read-only and touches nothing installed:
 
 ```sh
-git clone --filter=blob:none --no-checkout <repository> ~/skill-review/_upstream
-cd ~/skill-review/_upstream
-rev=$(git rev-parse --verify --quiet "<approved_commit>^{commit}") || echo "approved commit not found"
-git cat-file -e "$rev:<path>" || echo "path absent at approved commit"
-git diff --quiet "$rev" origin/HEAD -- "<path>"; echo $?
+git clone --filter=blob:none --no-checkout <repository> ~/skill-review/_upstream &&
+cd ~/skill-review/_upstream &&
+rev=$(git rev-parse --verify --quiet "<approved_commit>^{commit}") &&
+tip=$(git rev-parse --verify --quiet "origin/HEAD^{commit}") &&
+git cat-file -e "$rev:<path>" &&
+{ git diff --quiet "$rev" "$tip" -- "<path>"; rc=$?; [ "$rc" -le 1 ] && echo "diff $rc"; }
 ```
 
-Compare against the default branch unless the human names a branch or tag.
-Then, only if both guards above passed:
+Every step is chained with `&&`, so the diff runs only if the clone, both
+revisions, and the path at the approved commit all resolved; the last line
+prints `diff 0` or `diff 1` and nothing otherwise. Compare against the default
+branch unless the human names a branch or tag. Then:
 
-- diff exit `0` (the path is identical at both revisions) → **CURRENT**;
-- diff exit `1` (the path differs) → **UPDATE AVAILABLE**, naming both revisions;
+- `diff 0` (the path is identical at both revisions) → **CURRENT**;
+- `diff 1` (the path differs) → **UPDATE AVAILABLE**, naming both revisions;
 - `repository`, `path`, or `approved_commit` missing from the record → **NO
   UPDATE SOURCE CONFIGURED**;
-- the approved commit does not resolve, the path is absent at that commit, or
-  any command fails → the check did not run. Say so; it is neither state.
-  (`declared_source` is unverified, so a stale path must fail, not read as
-  CURRENT.)
+- no `diff` line printed — the clone failed, a revision did not resolve, the
+  path is absent at the approved commit, or the diff itself errored → the check
+  did not run. Say so; it is neither state. (`declared_source` is unverified,
+  so a stale path must fail, not read as CURRENT.)
 
 Comparing bare commit ids is not enough: an upstream commit that never touched
 `path` is not an update. `rev-parse` accepts the abbreviated ids the record
