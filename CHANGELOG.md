@@ -8,7 +8,7 @@ compatibility rules in [docs/identity-spec.md](docs/identity-spec.md) §14.
 
 ### Changed
 
-- Documentation: the postmortem and case study rewritten in a plainer first-person voice with a clearer account of the project's arc; the README, adoption guide, threat model, CI example, code map, and contributor guide tightened. No command, flag, path, exit code, or claim changed.
+- Documentation: the postmortem rewritten in a plainer first-person voice with a clearer account of the project's arc and a section of learnings from building for agents; the case study removed (its durable points folded into the postmortem); the README, adoption guide, threat model, CI example, code map, and contributor guide tightened. No command, flag, path, exit code, or claim changed.
 
 ## 0.1.1 - 2026-08-18
 

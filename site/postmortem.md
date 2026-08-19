@@ -63,6 +63,16 @@ Three commands. `sigildex lock` records the exact bytes of a skill a human appro
 
 The hosted API, the semantic index and the crawler are being decommissioned, frozen in a private archive rather than deleted. Nothing stays running to keep the option open.
 
+## Learnings from building for AI agents
+
+Three things I'd carry into any product whose user is an agent.
+
+**An MCP tool result is prompt input.** Author-supplied names and descriptions land straight in a model's context. A skill description containing a newline could forge a verdict line above the real one. So the safety verdict went out as the first line of every result, before any author-controlled string, and inspected content was wrapped in a fence that named it as untrusted, with embedded fence markers neutralised first. Controls like these reduce risk; they are not a security boundary, and I said so in the docs.
+
+**Publish contracts that break the build when they drift.** An agent can't ask a colleague what a doc meant. The `llms.txt`, the OpenAPI document, the MCP descriptor and the skill that wrapped the client were all generated from one source map and never hand-edited, and a linter failed CI when the free-tier limit or version in the published files stopped matching the code. Retriability was published data on every error, not something the agent had to infer from a status code.
+
+**Test with the actual users: spin up agents and watch.** When the user is a program, user research is cheap. A handful of times I pointed fresh agents, on different models from different vendors and with nothing but the entry file, at the product and the agent-facing docs, watched what they did, and asked them what was missing. Every run produced a short list of things a human reader glides past: an install line in the wrong place, a flag rule stated once where it needed to be twice, an exit-code table in the wrong order. I fixed most of them the same day. It's the cheapest usability testing I've done, and it's the part of this I'd repeat first.
+
 ## What I'd do differently
 
 **Decide corpus quality before chasing corpus scale.** Nearly half the index sat in 19 aggregator repos while the size threshold that would have fixed it was still an open question.

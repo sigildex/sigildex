@@ -41,8 +41,7 @@ defective. The other documents explain: the README, the
 the [CI guide](ci/README.md), `llms.txt`, and the Agent Skill. The JSON Schemas
 are structural subsets published so tools can read a document's shape.
 `sigildex check` is the authority on whether a record is valid. The
-[postmortem](postmortem.md) and [case study](case-study.md) are history and
-carry no requirements.
+[postmortem](postmortem.md) is history and carries no requirements.
 
 **Version bumps.** Any change that makes an existing record compare
 differently is a new spec version, per the specification's §14. The

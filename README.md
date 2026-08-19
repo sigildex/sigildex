@@ -174,4 +174,4 @@ Assets, attacker classes, and what is out of scope:
 - [SECURITY.md](SECURITY.md): how to report a vulnerability.
 - [site/](site): the website, generated from these files by `npm run build:site`.
 
-History: [docs/postmortem.md](docs/postmortem.md): why the hosted index was built and why this ships without one · [docs/case-study.md](docs/case-study.md): designing an API for agents first.
+History: [docs/postmortem.md](docs/postmortem.md): why the hosted index was built and why this ships without one.

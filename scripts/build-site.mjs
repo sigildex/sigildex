@@ -54,7 +54,6 @@ const COPIES = [
   ["docs/threat-model.md", "threat-model.md"],
   ["SECURITY.md", "security.md"],
   ["docs/postmortem.md", "postmortem.md"],
-  ["docs/case-study.md", "case-study.md"],
   ["docs/ci/README.md", "ci/README.md"],
   ["docs/ci/approval-check.yml", "ci/approval-check.yml"],
   // README.md is deliberately not mirrored: the static host does not serve a
@@ -214,7 +213,6 @@ const DOC_LINKS = [
   ],
 ];
 const BACKGROUND_LINKS = [
-  ["Case study", `${BLOB}/docs/case-study.md`, "Designing an API for agents first, and what it taught."],
   ["Postmortem", `${BLOB}/docs/postmortem.md`, "Why the hosted index was built, and why this ships without one."],
 ];
 

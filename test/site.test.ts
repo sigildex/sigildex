@@ -410,13 +410,12 @@ describe("the front page", () => {
     expect(html).toContain("they reduce risk; they are not a security boundary.");
   });
 
-  it("links the repository, the guides, and the two long-form documents", () => {
+  it("links the repository, the guides, and the postmortem", () => {
     for (const url of [
       "https://github.com/sigildex/sigildex",
       "https://github.com/sigildex/sigildex/blob/main/README.md",
       "https://github.com/sigildex/sigildex/blob/main/docs/safe-skill-adoption.md",
       "https://github.com/sigildex/sigildex/blob/main/docs/identity-spec.md",
-      "https://github.com/sigildex/sigildex/blob/main/docs/case-study.md",
       "https://github.com/sigildex/sigildex/blob/main/docs/postmortem.md",
       // Each neighbouring tool is linked to the page it is named after; every
       // one of these was fetched and resolves to that project.

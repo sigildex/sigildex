@@ -66,6 +66,5 @@ These controls reduce risk; they are not a security boundary, and no prompt-inje
 ## Optional
 
 - https://sigildex.ai/postmortem.md (postmortem: why the hosted index was built and why this ships without one)
-- https://sigildex.ai/case-study.md (case study: designing an API for agents first)
 - https://github.com/sigildex/sigildex/releases
 - https://registry.npmjs.org/sigildex
