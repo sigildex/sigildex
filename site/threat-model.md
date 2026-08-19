@@ -26,7 +26,9 @@ section is cited.
   excluded at any depth and pruned (specification §3.2). Content can be added,
   changed, or removed under either name and `check` still reports a match.
 - **The approval store is governed by repository settings, not by the tool.**
-  Branch protection and `CODEOWNERS` make approval a human act.
+  Branch protection, required review and `CODEOWNERS` make re-approval
+  review-required and auditable under the repository's settings. They are
+  governance controls, not proof that a review occurred.
 
 ## Attacker classes and what ships against each
 

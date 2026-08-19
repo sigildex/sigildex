@@ -1,6 +1,6 @@
 # Postmortem: building an index of agent skills, and shipping without one
 
-*Written for the 0.1 release, August 2026. Figures come from the project's own records; estimates are marked. Nothing described here is callable. The hosted API, the index and the payment rail are being retired. What remains is the local command-line tool in the [README](../README.md).*
+*Written for the 0.1 release, August 2026. Figures come from the project's own records; estimates are marked. Nothing described here is callable. The hosted API, the index and the payment rail have been shut down. What remains is the local command-line tool in the [README](../README.md).*
 
 Sigildex started in April 2026 as a side project: a hosted "trust preflight" for agent skills, an API and MCP server that let an agent find a skill, inspect it before install, and verify the installed copy by content hash. It grew past what I'd planned. By August it was about 160K lines of TypeScript, 200+ test files, 73 database migrations, and a raw skills table of 201,463 rows. I'm winding it down and shipping the one piece that stands on its own: a small CLI that records exactly which bytes a human approved and tells you when the installed copy drifts.
 
@@ -61,7 +61,7 @@ To be honest: beyond talking to a few AI developers I know, I never ran a real m
 
 Three commands. `sigildex lock` records the exact bytes of a skill a human approved into an approval record you commit beside the code. `sigildex check` verifies the copy that will actually run and exits 2 on drift, so a preflight or CI step can stop there. `sigildex diff` explains, file by file, what changed before you re-approve. Local, deterministic, no network. It records bytes, not trust: it doesn't certify that a skill is safe and it doesn't verify where a skill came from. It sits between the scanners and the installers you already use.
 
-The hosted API, the semantic index and the crawler are being decommissioned, frozen in a private archive rather than deleted. Nothing stays running to keep the option open.
+The hosted API, the semantic index and the crawler have been shut down, frozen in a private archive rather than deleted. Nothing stays running to keep the option open.
 
 ## Learnings from building for AI agents
 

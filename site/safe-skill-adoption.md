@@ -17,7 +17,7 @@ in four of them (5, 6, 9, 10) and connects the rest.
 7. [**Detect**](#checking-approved-skills-for-updates) upstream changes with read-only checks you run yourself.
 8. [**Quarantine**](#quarantine-the-update) the update, leaving the active copy untouched.
 9. [**Diff**](#staging-and-comparing-the-update) the two trees: `sigildex diff`.
-10. [**Re-approve**](#re-approve): a human reads the diff, `lock` records the new approval, and CI keeps the decision human.
+10. [**Re-approve**](#re-approve): a human reads the diff, `lock` records the new approval, and the CI gate catches mismatched states.
 
 **What a record is, and isn't.** An approval record is a snapshot of bytes:
 these files, at these paths, with these digests and executable bits, at lock
