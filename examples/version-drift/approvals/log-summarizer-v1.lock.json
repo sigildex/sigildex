@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "spec_version": 1,
-  "tool_version": "0.1.1",
+  "tool_version": "0.1.2",
   "approval_id": "log-summarizer-v1",
   "artifact_path": "examples/version-drift/skill-v1",
   "root_digest": "sha256:d445576462862500bd9537c93fc2390802d97bf3df13879a9b83cc21e04890ad",

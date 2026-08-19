@@ -43,7 +43,7 @@ No other subcommands or flags. `--out` must be `<existing-dir>/<approval-id>.loc
 
 Exit codes: `0` success/match/identical · `2` drift, or the trees differ (a completed run) · `1` tool, input, filesystem or walk error · `3` unsupported or invalid record. `1` and `3` are neither verdicts nor a match. `--json` prints three shapes — approval record (`lock`, matching `check`), drift report (`check` exit `2`, no `schema_version`), diff report (`diff`, with `schema_version`) — so branch on the exit code first.
 
-Install: `npm install -g sigildex@0.1.1` (Node 20+). Shell exit `127` (not on PATH) or `126` (not executable) means the tool did not run.
+Install: `npm install -g sigildex@0.1.2` (Node 20+). Shell exit `127` (not on PATH) or `126` (not executable) means the tool did not run.
 
 ## Limits
 

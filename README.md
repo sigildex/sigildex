@@ -33,7 +33,7 @@ current directory (otherwise `lock` exits `1`).
 ## Install
 
 ```sh
-npm install -g sigildex@0.1.1
+npm install -g sigildex@0.1.2
 ```
 
 Node.js 20 or later, macOS or Linux. Windows is out of scope in 0.1 (the CLI

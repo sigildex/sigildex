@@ -711,7 +711,7 @@ ${styles(sansFont, monoFont)}</style>
       <p class="kicker r1">Approval records for Agent Skills</p>
       <h1 class="r2">Know what changed in an Agent Skill before you trust the update.</h1>
       <p class="lead r3">A small open-source CLI. It fingerprints the exact bytes of an Agent Skill a human approved and tells you, file by file, when the installed copy drifts.</p>
-      <p class="install r4"><span class="p">$</span> npm install -g sigildex@0.1.1</p>
+      <p class="install r4"><span class="p">$</span> npm install -g sigildex@0.1.2</p>
       <div class="cta r4">
         <a class="btn btn-primary" href="${GUIDE}">Read the guide</a>
         <a class="btn btn-ghost" href="${REPO}">View on GitHub</a>

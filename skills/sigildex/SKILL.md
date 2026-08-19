@@ -54,7 +54,7 @@ The tool does not certify safety.
 ## CLI at a glance
 
 Run `sigildex --version` first. Node.js 20 or later
-(`npm install -g sigildex@0.1.1`); macOS and Linux — Windows exits `1`. Local
+(`npm install -g sigildex@0.1.2`); macOS and Linux — Windows exits `1`. Local
 paths only: no network, telemetry, or scoring. Shell exit `127` (not on
 PATH) or `126` (found, not executable) means the tool did not run: report that,
 not "no drift".

@@ -4,7 +4,11 @@ All notable changes to this package. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow the
 compatibility rules in [docs/identity-spec.md](docs/identity-spec.md) §14.
 
-## Unreleased
+## 0.1.2 - 2026-08-19
+
+Documentation only. `lock`, `check`, `diff`, and the identity computation are
+unchanged. A record written by 0.1.0 or 0.1.1 verifies with 0.1.2, and the
+reverse.
 
 ### Changed
 

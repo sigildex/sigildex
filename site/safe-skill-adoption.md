@@ -32,7 +32,7 @@ what was approved? Trust comes from where the records live and who can change
 them: a protected branch, code-owner review, a required status check. The rest
 of this guide is what makes the answer mean something.
 
-**Prerequisites.** Node.js 20+; `npm install -g sigildex@0.1.1`; macOS or Linux
+**Prerequisites.** Node.js 20+; `npm install -g sigildex@0.1.2`; macOS or Linux
 (Windows exits `1` unsupported; use WSL). Quickstart: [README](../README.md).
 
 **Exit codes**, used throughout: `0` match or identical · `2` drift or differ ·
