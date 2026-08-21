@@ -6,8 +6,8 @@ license: MIT
 
 # Sigildex: safe skill adoption
 
-Sigildex records the exact bytes a human approved and detects when an installed
-copy stops matching. This skill runs that workflow: you stage, inspect, run
+Sigildex records the exact bytes a human approved and, when invoked, checks
+whether a named copy still matches. This skill runs that workflow: you stage, inspect, run
 scanners, summarize, compare, and report. **A human decides.**
 
 `.claude/skills/<name>` below stands for the user's active skills directory.

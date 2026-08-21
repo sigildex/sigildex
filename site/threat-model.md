@@ -38,7 +38,7 @@ scanners, and human review before any record exists, following the workflow in
 It records what was approved and has no opinion on whether approving it was
 wise.
 
-**An upstream update that silently replaces approved content.** `check`
+**An installer or other process that silently replaces approved content.** `check`
 compares file set, per-file SHA-256, size, and the executable bit against the
 record and reports drift as exit `2` (specification §12). The executable bit is
 part of identity (§6.3), so flipping a file to executable is drift on its own.

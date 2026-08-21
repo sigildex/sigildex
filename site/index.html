@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sigildex — know what changed in an Agent Skill</title>
-<meta name="description" content="Sigildex is a small open-source CLI. It fingerprints the exact bytes of an Agent Skill a human approved and tells you, file by file, when the installed copy drifts.">
+<meta name="description" content="Sigildex is a small open-source CLI. It fingerprints the exact bytes of an Agent Skill a human approved and, when you run check, shows file by file whether the copy you name still matches.">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#07080C">
 <link rel="canonical" href="https://sigildex.ai/">
@@ -13,12 +13,12 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Sigildex">
 <meta property="og:title" content="Sigildex — know what changed in an Agent Skill">
-<meta property="og:description" content="Sigildex is a small open-source CLI. It fingerprints the exact bytes of an Agent Skill a human approved and tells you, file by file, when the installed copy drifts.">
+<meta property="og:description" content="Sigildex is a small open-source CLI. It fingerprints the exact bytes of an Agent Skill a human approved and, when you run check, shows file by file whether the copy you name still matches.">
 <meta property="og:url" content="https://sigildex.ai/">
 <meta property="og:image" content="https://sigildex.ai/logo.png">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Sigildex — know what changed in an Agent Skill">
-<meta name="twitter:description" content="Sigildex is a small open-source CLI. It fingerprints the exact bytes of an Agent Skill a human approved and tells you, file by file, when the installed copy drifts.">
+<meta name="twitter:description" content="Sigildex is a small open-source CLI. It fingerprints the exact bytes of an Agent Skill a human approved and, when you run check, shows file by file whether the copy you name still matches.">
 <meta name="twitter:image" content="https://sigildex.ai/logo.png">
 <style>
 /* Geist and Geist Mono, copyright 2024 The Geist Project Authors, SIL Open Font License 1.1. Full licence: https://sigildex.ai/fonts/GEIST-OFL.txt */
@@ -356,7 +356,7 @@ footer .type{flex-basis:100%;font-size:12.5px;color:var(--subtle);max-width:none
       <svg class="hero-mark r1" width="72" height="72" viewBox="0 0 400 400" fill="currentColor" fill-rule="evenodd" aria-hidden="true" focusable="false"><path d="m200 71.6l-28.2 56.4h14.2v1.5l-1.4 7.1-1.3 .9-8.5 2.5-9.2 4.4-6.3 3.8h-1.1l-33.7-24.4h-.5v-.6h-.8l23.8 36.1-4.7 5.8-3.1 5-4.1 8.3-2.4 6.7-1 .7-6.8 1.4-27.9 7-17.4 4.8-2.4 .3-.3 .8 .9 .6 2.3 .3 33.3 8.8 18.5 4.4 3.3 10.2 3.8 7.9v1l-16.9 17 10.9 11v1.1l-6.1 5.9-3.6 4.6-8.9 12.7 14-9.7 2.5-2 7-6.9h.7l60.2 60.2 1.2 .8 1.2-.8 60.2-60.2h.7l7 6.9 2.5 2 14 9.7-8.9-12.7-3.6-4.6-6.1-5.9v-1.1l10.9-11-16.9-17v-1l3.8-7.9 3.3-10.2 18.5-4.4 33.3-8.8 2.3-.3 .9-.6-.3-.8-2.4-.3-17.4-4.8-27.9-7-6.8-1.4-1-.7-2.4-6.7-4.1-8.3-3.1-5-4.7-5.8 23.8-36.1h-.8v.6h-.5l-33.7 24.4h-1.1l-6.3-3.8-9.2-4.4-8.5-2.5-1.3-.9-1.4-7.1v-1.5h14.2zm0 147.5l-2.9 .1-1.5-.2-2.2-.8-3.6-1.7-.6-1 7.1-7 1.6 .4h2.1 2.1l1.6-.4 7.1 7-.6 1-3.6 1.7-2.2 .8-1.5 .2zm0-28.2h-1.6l-2.2 .4-6.9-6.9 .5-1.1 2.6-1.2 2-.9 3.5-.7h2.1 2.1l3.5 .7 2 .9 2.6 1.2 .5 1.1-6.9 6.9-2.2-.4zm-56.8 70.8l10.9-11 35.7 35.7 .9 1.5 6 27.3zm60.1 53.5l6-27.3 .9-1.5 35.7-35.7 10.9 11zm-7-34.7l-1-1.4-.6-3.7-11.5-50.5-.4-2.4 .5-1.3 1.1-.2 4 2.6 2.7 1.2 5.1 1.4 .3 .8v53.3zm7.2-.2v-53.3l.3-.8 5.1-1.4 2.7-1.2 4-2.6 1.1 .2 .5 1.3-.4 2.4-11.5 50.5-.6 3.7-1 1.4zm-27.2-51.8l.6 .2 .6 1.9 7.5 33.5 2 7.7v1.4h-.6l-27.3-27.4zm64.6 17.3l-27.3 27.4h-.6v-1.4l2-7.7 7.5-33.5 .6-1.9 .6-.2zm-102.5 10.7l-.9-.5-5.5-5.5 .6-1.1 14.8-14.8 .6-1-.9-1.2-3-5.3-1.9-3.9-2.2-6.9 .7-.3 2.5 .8 29.1 6.1-33.5 33.5zm122.8-.1l-33.5-33.5 29.1-6.1 2.5-.8 .7 .3-2.2 6.9-1.9 3.9-3 5.3-.9 1.2 .6 1 14.8 14.8 .6 1.1-5.5 5.5-.9 .5zm-142-52.9l1.2-.3 52.9 .2 .7 .9v1.2l2.3 6.4 2.5 3.6v.7l-.8 .8h-1.4l-55.5-12.3zm159.7 1.2l-55.5 12.3h-1.4l-.8-.8v-.7l2.5-3.6 2.3-6.4v-1.2l.7-.9 52.9-.2 1.2 .3zm-95.1 5.8l-1.5-2.5-1.3-3.2-.6-5 .6-4.9 1.2-3.1 1.5-2.4 .8-.2 7 7.1-.4 1.3v4.8l.4 1.1-6.9 7zm31.6 0l-6.9-7 .4-1.1v-4.8l-.4-1.3 7-7.1 .8 .2 1.5 2.4 1.2 3.1 .6 4.9-.6 5-1.3 3.2-1.5 2.5zm-95.7-14.4l.8-.8 46.3-10.3 9.6-2h1.8l.6 .6v1.2h-.5l-3.1 5.8-1.2 4v1.1l-.7 .6-52.9 .2zm159.9 .4l-52.9-.2-.7-.6v-1.1l-1.2-4-3.1-5.8h-.5v-1.2l.6-.6h1.8l9.6 2 46.3 10.3 .8 .8zm-138.6-13v-1.4l4.1-8.5 5.4-7.8h1.1l8.7 12.9-.3 1-2.6 .3-3.5 1zm105.1-2.5l-3.5-1-2.6-.3-.3-1 8.7-12.9h1.1l5.4 7.8 4.1 8.5v1.4zm-62.3-2.2l-.9-.7 .1-2.1 6-26.6 5-25.5 .1-2.8-10.6-.2-.3-.4 13.3-26.6v79.1l-1 1h-1.6l-3.4 1.2-4 2-1.9 1.6zm31.6 0l-1.9-1.6-4-2-3.4-1.2h-1.6l-1-1v-79.1l13.3 26.6-.3 .4-10.6 .2 .1 2.8 5 25.5 6 26.6 .1 2.1-.9 .7zm-65.7-28.2l27.3 19.7v1.8l-1.1 3.8-1.1 .6-5.2 1.1-1.5 .2-.7-.7zm82.9 26.5l-.7 .7-1.5-.2-5.2-1.1-1.1-.6-1.1-3.8v-1.8l27.3-19.7zm-50.3-32.2l.5 .6-4 17.7-13.3-9.6v-.8l6.6-4 5.8-2.5zm39.8 1.4l5.8 2.5 6.6 4v.8l-13.3 9.6-4-17.7 .5-.6z"/></svg>
       <p class="kicker r1">Approval records for Agent Skills</p>
       <h1 class="r2">Know what changed in an Agent Skill before you trust the update.</h1>
-      <p class="lead r3">A small open-source CLI. It fingerprints the exact bytes of an Agent Skill a human approved and tells you, file by file, when the installed copy drifts.</p>
+      <p class="lead r3">A small open-source CLI. It fingerprints the exact bytes of an Agent Skill a human approved and, when you run <code>check</code>, shows file by file whether the copy you name still matches.</p>
       <p class="install r4"><span class="p">$</span> npm install -g sigildex@0.1.2</p>
       <div class="cta r4">
         <a class="btn btn-primary" href="https://github.com/sigildex/sigildex/blob/main/docs/safe-skill-adoption.md">Read the guide</a>
@@ -385,8 +385,8 @@ footer .type{flex-basis:100%;font-size:12.5px;color:var(--subtle);max-width:none
 <section id="demo" class="sec">
   <div class="wrap">
     <p class="kicker"><span class="idx">01</span></p>
-    <h2>You approved a skill. Then it changed.</h2>
-    <p class="sec-desc">You read version 1 and approved it. Version 2 adds an executable script and rewrites the instructions to call it — and nothing in the install path tells you.</p>
+    <h2>Version 2 is not what you approved.</h2>
+    <p class="sec-desc">You approved version 1. Before installing version 2, check the candidate against the approval record. Here, it adds an executable script and rewrites the instructions to call it.</p>
     <div class="term reveal">
       <div class="term-bar">
         <span class="dot"></span><span class="dot"></span><span class="dot"></span>
@@ -433,7 +433,7 @@ Review the changes and re-lock only after approving them.
   <div class="wrap">
     <p class="kicker"><span class="idx">02</span></p>
     <h2>The workflow</h2>
-    <p class="sec-desc">Other tools find and scan a skill; you review it. Sigildex records what you approved and tells you when the installed copy stops matching.</p>
+    <p class="sec-desc">Other tools find and scan a skill; you review it. Sigildex records what you approved and, when invoked, verifies whether the installed copy still matches.</p>
     <ol class="steps">
     <li class="step">
       <span class="tag">Other tools</span>
@@ -460,7 +460,7 @@ Review the changes and re-lock only after approving them.
       <span class="tag">Sigildex</span>
       <span class="n">04</span>
       <h3>Record &amp; verify</h3>
-      <p>The step nothing else does: remember what you approved. <code>sigildex lock</code> records the approved bytes' identity in an approval record beside your code; after install, <code>sigildex check</code> verifies the copy your agent loads. Drift exits 2 — a preflight or CI step stops there.</p>
+      <p>The step Sigildex adds: remember what you approved. <code>sigildex lock</code> records the approved bytes' identity in an approval record beside your code; after install, <code>sigildex check</code> verifies the copy your agent loads. Drift exits 2 — a configured preflight or CI gate can stop there.</p>
     </li>
     <li class="step">
       <span class="tag">Your tools + Sigildex</span>
@@ -469,7 +469,7 @@ Review the changes and re-lock only after approving them.
       <p>When you or CI ask, your installer reports whether upstream moved (<a href="https://cli.github.com/manual/gh_skill_update"><code>gh skill update --dry-run</code></a> is one read-only way). Quarantine the new version; <code>sigildex diff</code> shows what changed per file; a human re-approves; <code>lock</code> again, install, <code>check</code> again.</p>
     </li>
     </ol>
-    <p class="loop reveal"><span>discover → quarantine → scan → review → lock → install → check</span> <span class="cyc" role="img" aria-label="then, on each update">↻</span> <span>update → quarantine → diff → review → lock → install → check</span></p>
+    <p class="loop reveal"><span>discover → quarantine → scan → review → lock → install → check</span> <span class="cyc" role="img" aria-label="then, when considering an update">↻</span> <span>update → quarantine → diff → review → lock → install → check</span></p>
     <p class="note">The stage-by-stage guide, with quarantine and CI: <a href="https://github.com/sigildex/sigildex/blob/main/docs/safe-skill-adoption.md"><code>docs/safe-skill-adoption.md</code></a>.</p>
   </div>
 </section>

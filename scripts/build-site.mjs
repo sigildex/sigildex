@@ -176,7 +176,7 @@ const WORKFLOW = [
     stage: "Record & verify",
     owner: "Sigildex",
     bodyHtml:
-      "The step nothing else does: remember what you approved. <code>sigildex lock</code> records the approved bytes' identity in an approval record beside your code; after install, <code>sigildex check</code> verifies the copy your agent loads. Drift exits 2 — a preflight or CI step stops there.",
+      "The step Sigildex adds: remember what you approved. <code>sigildex lock</code> records the approved bytes' identity in an approval record beside your code; after install, <code>sigildex check</code> verifies the copy your agent loads. Drift exits 2 — a configured preflight or CI gate can stop there.",
     examplesHtml: "",
     ours: true,
   },
@@ -628,7 +628,7 @@ footer .type{flex-basis:100%;font-size:12.5px;color:var(--subtle);max-width:none
  */
 function indexHtml({ sansFont, monoFont, mark, faviconSvg }) {
   const description =
-    "Sigildex is a small open-source CLI. It fingerprints the exact bytes of an Agent Skill a human approved and tells you, file by file, when the installed copy drifts.";
+    "Sigildex is a small open-source CLI. It fingerprints the exact bytes of an Agent Skill a human approved and, when you run check, shows file by file whether the copy you name still matches.";
 
   const steps = WORKFLOW.map(({ stage, owner, bodyHtml, examplesHtml, ours }, index) => {
     const n = String(index + 1).padStart(2, "0");
@@ -710,7 +710,7 @@ ${styles(sansFont, monoFont)}</style>
       ${sigilSvg(72, "hero-mark r1", mark)}
       <p class="kicker r1">Approval records for Agent Skills</p>
       <h1 class="r2">Know what changed in an Agent Skill before you trust the update.</h1>
-      <p class="lead r3">A small open-source CLI. It fingerprints the exact bytes of an Agent Skill a human approved and tells you, file by file, when the installed copy drifts.</p>
+      <p class="lead r3">A small open-source CLI. It fingerprints the exact bytes of an Agent Skill a human approved and, when you run <code>check</code>, shows file by file whether the copy you name still matches.</p>
       <p class="install r4"><span class="p">$</span> npm install -g sigildex@0.1.2</p>
       <div class="cta r4">
         <a class="btn btn-primary" href="${GUIDE}">Read the guide</a>
@@ -739,8 +739,8 @@ ${styles(sansFont, monoFont)}</style>
 <section id="demo" class="sec">
   <div class="wrap">
     <p class="kicker"><span class="idx">01</span></p>
-    <h2>You approved a skill. Then it changed.</h2>
-    <p class="sec-desc">You read version 1 and approved it. Version 2 adds an executable script and rewrites the instructions to call it — and nothing in the install path tells you.</p>
+    <h2>Version 2 is not what you approved.</h2>
+    <p class="sec-desc">You approved version 1. Before installing version 2, check the candidate against the approval record. Here, it adds an executable script and rewrites the instructions to call it.</p>
     <div class="term reveal">
       <div class="term-bar">
         <span class="dot"></span><span class="dot"></span><span class="dot"></span>
@@ -756,11 +756,11 @@ ${styles(sansFont, monoFont)}</style>
   <div class="wrap">
     <p class="kicker"><span class="idx">02</span></p>
     <h2>The workflow</h2>
-    <p class="sec-desc">Other tools find and scan a skill; you review it. Sigildex records what you approved and tells you when the installed copy stops matching.</p>
+    <p class="sec-desc">Other tools find and scan a skill; you review it. Sigildex records what you approved and, when invoked, verifies whether the installed copy still matches.</p>
     <ol class="steps">
 ${steps}
     </ol>
-    <p class="loop reveal"><span>${LOOP_LINE[0]}</span> <span class="cyc" role="img" aria-label="then, on each update">↻</span> <span>${LOOP_LINE[1]}</span></p>
+    <p class="loop reveal"><span>${LOOP_LINE[0]}</span> <span class="cyc" role="img" aria-label="then, when considering an update">↻</span> <span>${LOOP_LINE[1]}</span></p>
     <p class="note">The stage-by-stage guide, with quarantine and CI: <a href="${GUIDE}"><code>docs/safe-skill-adoption.md</code></a>.</p>
   </div>
 </section>

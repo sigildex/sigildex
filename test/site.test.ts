@@ -324,7 +324,7 @@ describe("the front page", () => {
     // The description says what the tool reports — files, and when they drift.
     // `diff` classifies files; it says nothing about capabilities.
     expect(html).toContain(
-      "Sigildex is a small open-source CLI. It fingerprints the exact bytes of an Agent Skill a human approved and tells you, file by file, when the installed copy drifts.",
+      "Sigildex is a small open-source CLI. It fingerprints the exact bytes of an Agent Skill a human approved and, when you run check, shows file by file whether the copy you name still matches.",
     );
     expect(html).not.toMatch(/capabilit/i);
     // The facts line carries the "runs locally" claim; the honesty claim lives
@@ -335,7 +335,7 @@ describe("the front page", () => {
   it("carries all six sections and nothing more", () => {
     const anchors: Array<[string, string]> = [
       ["overview", "Approval records for Agent Skills"],
-      ["demo", "You approved a skill. Then it changed."],
+      ["demo", "Version 2 is not what you approved."],
       ["workflow", "The workflow"],
       ["agent", "Use it with your agent"],
       ["links", "Docs"],

@@ -1,15 +1,15 @@
 # Sigildex
 
-Record what a human approved in an Agent Skill. Detect when it changes.
+Record the Agent Skill a human approved. Verify that the installed copy still matches.
 
 [sigildex.ai](https://sigildex.ai) · [npm](https://www.npmjs.com/package/sigildex) · MIT · Node.js 20+ · macOS / Linux
 
 An [Agent Skill](https://agentskills.io/specification) is instructions plus
 files your agent reads and often executes. You review version 1 and approve it.
-Upstream ships version 2 with a new script and rewritten instructions, and
-nothing in the install path tells you. Discovery tools find skills and scanners
-produce evidence, but nothing remembers what you approved or notices when the
-installed bytes stop matching it.
+Later, an installer offers version 2, or another process modifies the installed
+directory. Discovery and scanning tools can assess a candidate, but they do not
+preserve the exact human-reviewed baseline. Sigildex records that baseline and,
+whenever you run `check`, reports whether the copy you name still matches it.
 
 Sigildex is a small, deterministic CLI that fills that gap. It reads only the
 paths you give it: no network calls, no telemetry, no scoring, no hosted service,
@@ -127,8 +127,9 @@ freeze: [docs/safe-skill-adoption.md](docs/safe-skill-adoption.md).
 - **Your installer's update check?** GitHub CLI [`gh skill`](https://cli.github.com/)
   (preview) and the [Vercel Skills CLI](https://github.com/vercel-labs/skills)
   report that upstream moved. Whether the replacement should happen is a human
-  decision; Sigildex records it, and `check` reports when the installed copy
-  stops matching so a preflight or CI step can stop there.
+  decision; Sigildex records it, and `check`, when run, reports whether the
+  installed copy still matches so a configured preflight or CI gate can stop
+  there.
 
 Keep all five. Sigildex answers only the question they leave open: is what is
 installed still what a human approved?
